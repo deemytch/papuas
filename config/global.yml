@@ -1,0 +1,16 @@
+databases:
+  pg:
+    host: 127.0.0.1
+    port: 5432
+    db: pjreq
+    schema: pjreq
+    user: pjreq
+    password: ff6s3NvNqZ3xw4xKSdiv
+  redis:
+    host: 127.0.0.1
+    port: 6379
+    user: 
+    password:
+    db: 0
+global:
+  query_delay: 60 # интервал опроса исходников

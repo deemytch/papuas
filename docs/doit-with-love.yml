@@ -1,0 +1,12 @@
+# образец постановки задачи
+# на node1 заходим под юзером masha и так далее
+servers:
+  node1: masha
+  node2: masha
+  noda3: volodymyr
+# путь к срипту относительно папки, заданной в настройках
+script: jbosdeinst/rmrf.sh
+files:
+- list
+- unclean.zip
+- main.conf

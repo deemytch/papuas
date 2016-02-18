@@ -1,0 +1,7 @@
+*~
+/.bundle
+/log
+db.sqlite
+/vendor
+Gemfile.lock
+

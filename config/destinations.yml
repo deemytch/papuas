@@ -1,9 +1,0 @@
----
-destinations:
-  serv_a:
-    host: blabla.com
-    port: 22
-    users:
-      # keyfile: host.user.*, host.user.pub.*
-    - borja
-    - vasvas

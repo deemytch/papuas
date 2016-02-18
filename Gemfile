@@ -1,9 +1,10 @@
 source 'https://rubygems.org'
 
-gem 'sqlite3'
+gem 'mysql2'
 gem 'daemons'
-gem 'sidekiq'
-gem 'redis'
+
 gem 'sequel'
+gem 'sequel_enum'
+
 gem 'pry'
 gem 'workflow'

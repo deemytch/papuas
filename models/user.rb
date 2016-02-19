@@ -1,14 +1,17 @@
 class User < Sequel::Model
-  many_to_one :node
+  set_schema do
+    primary_key :id
+    String :name, unique: true, null: false
+    String :login,            null: false, index: true
+    String :key,              null: false
+    String :key_type,         null: false
+    column :status, "enum('new', 'active', 'failed', 'deleted')", :default => 'new', null: false, index: true
+  end
   many_to_one :source_path
+  many_to_many :servers, :join_table => :users_servers
   
   def validate
-    validates_presence :name
-    validates_unique [:name, :source_path_id, :node_path_id]
-    if (source_path_id.nil? && node_path_id.nil?) ||
-      (source_path_id.present? && node_path_id.present?)
-        errors.add :source_path_id, 'Ссылка либо на источник, либо на назначение'
-    end
+    validates_unique [:login, :key]
   end
 
 end

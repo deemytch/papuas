@@ -1,0 +1,2 @@
+class SourceNode < Server
+end

@@ -1,4 +1,4 @@
-class Logger
+class ALogger
   def initialize(fname)
     @log = File.new(fname, 'a')
     at_exit{ @log.close unless @log.closed? }

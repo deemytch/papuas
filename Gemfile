@@ -10,3 +10,6 @@ gem 'sequel_polymorphic'
 gem 'pry'
 gem 'workflow'
 gem 'tty'
+
+gem 'net-ssh'
+gem 'sshkit'

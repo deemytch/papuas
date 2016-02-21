@@ -7,5 +7,9 @@ class ServersUser < Sequel::Model
     Integer :user_id, null: false, index: true
       foreign_key [:user_id], :users
       index [:server_id, :server_type, :user_id], unique: true
+    DateTime :created_at, null: false
+    DateTime :updated_at, null: false
   end
+  many_to_one :user
+  many_to_one :server
 end

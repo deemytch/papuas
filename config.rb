@@ -10,6 +10,12 @@ class Hash
 end
 
 module Config
-  basedir ||= File.expand_path(File.dirname(__FILE__))
-  $cfg = YAML.load(File.read("#{basedir}/config/global.yml")).symkeys
+  $base ||= File.expand_path(File.dirname(__FILE__))
+  $cfg = YAML.load(File.read("#{$base}/config/global.yml")).symkeys
+  # rubyver = '2.3.0'
+  # ENV['PATH']= "#{$base}/vendor/ruby/2.3.0/bin"
+  # ENV['RUBYOPT'] = '-rbundler/setup'
+  # ENV['RUBYLIB'] = "#{ENV['HOME']}/.gem/ruby/#{rubyver}/gems/bundler-1.11.2/lib"
+  # ENV['GEM_HOME'] = "#{$base}/vendor/ruby/#{rubyver}"
+  # ENV['BUNDLE_GEMFILE'] = "#{$base}/Gemfile"
 end

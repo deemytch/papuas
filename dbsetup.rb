@@ -1,8 +1,7 @@
-#!/usr/bin/ruby
+#!/usr/bin/env ruby
 # Миграции и первоначальная настройка базы данных с нуля
 require 'optparse'
 require_relative './config.rb'
-
 use_force = false
 
 OptionParser.new do |parser|

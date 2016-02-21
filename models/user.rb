@@ -6,6 +6,8 @@ class User < Sequel::Model
     String :key,              null: false
     String :key_type,         null: false
     column :status, "enum('new', 'active', 'failed', 'deleted')", :default => 'new', null: false, index: true
+    DateTime :created_at, null: false
+    DateTime :updated_at, null: false
   end
   many_to_one :source_path
   many_to_many :servers, :join_table => :users_servers

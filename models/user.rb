@@ -9,7 +9,6 @@ class User < Sequel::Model
     DateTime :created_at, null: false
     DateTime :updated_at, null: false
   end
-  many_to_one :source_path
   many_to_many :servers, :join_table => :users_servers
   
   def validate

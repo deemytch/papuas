@@ -15,9 +15,9 @@ class Server < Sequel::Model
   one_to_many :task_reports
   many_to_many :users, :join_table => :servers_users
   many_to_many :tasks, :join_table => :tasks_reports
-
-  def login_with(user)
+  
+  def login_with(user, &block)
     # Net::SSH.start(host, user.login, key: key)
-    Net::SSH.start(host, user.login)
+    Net::SSH.start(host, user.login){ yield }
   end
 end

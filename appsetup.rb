@@ -1,11 +1,15 @@
 #!/usr/bin/env ruby
 =begin
-  Флаг -h - вывести справку и отвалиться
   1. Проверить наличие базы
   2. Прочитать параметры командной строки
   3. Проверить непротиворечивость параметров и базы
   4. Сделать действие
 =end
+options = {}
+if ARGV.empty?
+  puts "\n\t\tСправка - по ключу -h\n\n"
+  exit
+end
 
 require 'yaml'
 require 'mysql2'
@@ -23,7 +27,6 @@ Sequel::Model.plugin :polymorphic
 Sequel::Model.plugin :schema
 DB = Sequel.mysql2 $cfg[:mysql]
 %w[task_report user task server servers_user source_node task_node].each{|src| require_relative "models/#{src}.rb" }
-options = {}
 logger = Logger.new STDERR
 
 def helptext
@@ -76,13 +79,11 @@ OptionParser.new do |parser|
     options[:ctrl] = :publish
   end
   parser.on('-v', '--verbose', 'Разговорчивый режим')do
-    options[:verbose] = true
-    DB.loggers << Logger.new(STDOUT)
+		options[:verbose] ||= 0
+    options[:verbose] += 1
+    DB.loggers << Logger.new(STDOUT) if options[:verbose] > 1
   end
-  parser.on('-h', '--help', 'Справка') do
-    puts "#{parser}\n#{helptext}"
-    exit
-  end
+  parser.on('-h', '--help', 'Справка'){ puts "#{parser}\n#{helptext}"; exit }
 end.parse!
 
 server = nil
@@ -103,10 +104,13 @@ case options[:ctrl]
         server = SourceNode[name: options[:name]]
         server.delete
       when :listing
-        puts TTY::Table.new(
-          %w[состояние имя адрес порт путь описание],
-          SourceNode.all.collect{|node| [node.status, node.name, node.host, node.port, node.path, node.descr]},
-          renderer: 'unicode')
+				if (servers = SourceNode.all.collect{|node| [node.status, node.name, node.host, node.port, node.path, node.descr]}).any? then
+					puts TTY::Table.new(
+						%w[состояние имя адрес порт путь описание],
+						servers, renderer: 'unicode')
+				elsif options[:verbose]
+					puts "Ничего нет"
+				end
     end
   when :node
     case options[:action]
@@ -120,10 +124,14 @@ case options[:ctrl]
         server = TaskNode[name: options[:name]]
         server.delete
       when :listing
-        puts TTY::Table.new(
-          header: %w[состояние имя адрес порт путь описание],
-          rows: TaskNode.all.collect{|node| [node.status, node.name, node.host, node.port, node.path, node.descr]},
-          renderer: 'unicode')
+				if (nodes = TaskNode.all.collect{|node| [node.status, node.name, node.host, node.port, node.path, node.descr]}).any? then
+					puts TTY::Table.new(
+						header: %w[состояние имя адрес порт путь описание],
+						rows: nodes,
+						renderer: 'unicode')
+				elsif options[:verbose]
+				  puts "Ничего нет"
+				end
     end
   when :user
     case options[:action]
@@ -131,13 +139,13 @@ case options[:ctrl]
         logger.info "Удаляю пользователя #{options[:name]}"
         User[login: options[:name]].delete
       when :listing
-        if (r = User.all.collect{|user| [user.name, user.login, user.key[0..40], user.status]}).any?
+        if (r = User.all.collect{|user| [user.name, user.login, user.key[0..40], user.status, user.source_nodes.collect{|sn| sn.name || "#{sn.host}:#{sn.port}/#{sn.path}" }, user.task_nodes.collect{|tn| tn.name || "#{tn.host}:#{tn.port}"}]}).any?
           puts TTY::Table.new(
-            header: %w[имя логин ключ состояние],
+            header: %w[имя логин ключ состояние источники узлы],
             rows: r,
             renderer: 'unicode')
-        else
-          puts "\t\tНичего нет" if options[:verbose]
+        elsif options[:verbose]
+          puts "\t\tНикого нет"
         end
     end
   when :logrotate

@@ -1,5 +1,6 @@
 require 'yaml'
-require "pathname"
+require 'pathname'
+require 'logger'
 
 class Hash
   def symkeys
@@ -12,36 +13,27 @@ class Hash
 end
 
 module Config
-  $base ||= File.expand_path(File.dirname(__FILE__))
-  $cfg = YAML.load(File.read("#{$base}/config/global.yml")).symkeys
-  ENV["BUNDLE_GEMFILE"] ||= "#{$base}/Gemfile"
-  require "rubygems"
-  require "bundler/setup"
-  
-  # rubyver = '2.3.0'
-  # ENV['PATH']= "#{$base}/vendor/ruby/2.3.0/bin"
-  # ENV['RUBYOPT'] = '-rbundler/setup'
-  # ENV['RUBYLIB'] = "#{ENV['HOME']}/.gem/ruby/#{rubyver}/gems/bundler-1.11.2/lib"
-  # ENV['GEM_HOME'] = "#{$base}/vendor/ruby/#{rubyver}"
-  # ENV['BUNDLE_GEMFILE'] = "#{$base}/Gemfile"
-  
-  
-require 'yaml'
-require 'mysql2'
-require 'optparse'
-require 'sequel'
-require 'logger'
-require 'tty'
-require 'sshkit'
+  def self.start
+    $base ||= File.expand_path(File.dirname(__FILE__))
+    $cfg = YAML.load_file("#{$base}/config/global.yml").symkeys
+    $logger = Logger.new $cfg[:global][:log]
+    $logger.level = :error
 
-DB = Sequel.mysql2 $cfg[:mysql]
+    ENV["BUNDLE_GEMFILE"] ||= "#{$base}/Gemfile"
+    require "rubygems"
+    require "bundler/setup"
+    require 'yaml'
+    require 'mysql2'
+    require 'workflow'
+    require 'optparse'
+    require 'active_record'
+    require 'logger'
+    require 'tty'
+    require 'sshkit'
 
-Sequel::Model.plugin :validation_helpers
-Sequel::Model.plugin :timestamps, :update_on_create=>true
-Sequel::Model.plugin :update_refresh
-Sequel::Model.plugin :auto_validations, :not_null=>:presence
-Sequel::Model.plugin :polymorphic
-Sequel::Model.plugin :schema
-%w[errors workflow_sequel task_report user task server servers_user source_node task_node].each{|src| require_relative "models/#{src}.rb" }
-
+    $db = ActiveRecord::Base.establish_connection($cfg[:mysql][:development])
+    %w[errors task_report user task server servers_user source_node task_node].each do |src|
+      require_relative "#{$base}/models/#{src}.rb"
+    end
+  end
 end

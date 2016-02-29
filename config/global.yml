@@ -1,13 +1,16 @@
 mysql:
-  database: pjreq
-  user: pjreq
-  password: ababagalamaga
-  # host:
-  # port:
-  # socket:
-  # encoding:
-  # timeout:
-  # connect_timeout:
-  # http://sequel.jeremyevans.net/rdoc/files/doc/opening_databases_rdoc.html#label-mysql2
+    development:
+        adapter: mysql2
+        encoding: utf8
+        pool: 25
+        schema_search_path: timebay
+        connect_timeout: 1500
+        read_timeout: 1500
+        write_timeout: 1500
+        database: pjreq
+        username: pjreq
+        password: ababagalamaga
+
 global:
-  query_delay: 300 # интервал опроса исходников
+    query_delay: 300 # интервал опроса исходников
+    log: log/bigbro-#{Time.now.strftime "%s"}

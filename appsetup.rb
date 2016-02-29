@@ -12,7 +12,7 @@ if ARGV.empty?
 end
 
 require_relative './config.rb'
-logger = Logger.new STDERR
+Config.start
 
 def helptext
 "Примеры:
@@ -107,28 +107,32 @@ OptionParser.new do |parser|
 	parser.on('-v', '--verbose', 'Разговорчивый режим')do
 		options[:verbose] ||= 0
 		options[:verbose] += 1
-		DB.loggers << Logger.new(STDOUT) if options[:verbose] == 2
 	end
 	parser.on('-h', '--help', 'Справка'){ puts "#{parser}\n#{helptext}"; exit }
 end.parse!
 
 server = nil
+if options.key? :verbose
+	$logger.level = options[:verbose]
+	$logger.info "Уровень разговорчивости #{$logger.level}"
+end
+
 begin
 	case options[:ctrl]
 		when :source
 			case options[:action]
 				when :add
-					logger.info "Добавляю узел-источник #{options[:name]}" if options[:verbose]
+					$logger.info "Добавляю узел-источник #{options[:name]}" if options[:verbose]
 					server = SourceNode.create options.with_keys(:name, :host, :path, :port)
-					logger.info "#{server.nil? ? 'Неудачно' : 'Удачно' }" if options[:verbose]
+					$logger.info "#{server.nil? ? 'Неудачно' : 'Удачно' }" if options[:verbose]
 				when :mod
-					logger.info "Меняю узел-источник #{options[:name]}" if options[:verbose]
-					server = SourceNode[name: options[:name]]
-					server.set_fields options, :name, :host, :path, :port
+					$logger.info "Меняю узел-источник #{options[:name]}" if options[:verbose]
+					server = SourceNode.find_by name: options[:name]
+					server.update_attributes options.with_keys(:name, :host, :path, :port)
 					server.save
 				when :del
-					logger.info "Удаляю узел-источник #{options[:name]}" if options[:verbose]
-					server = SourceNode[name: options[:name]]
+					$logger.info "Удаляю узел-источник #{options[:name]}" if options[:verbose]
+					server = SourceNode name: options[:name]
 					server.delete
 				when :listing
 					if (servers = SourceNode.all.collect{|node| [node.status, node.name, node.host, node.port, node.path, node.descr]}).any? then
@@ -151,10 +155,10 @@ begin
 					server = TaskNode[name: options[:name]]
 					server.delete
 				when :check
-					puts "Проверяю данные #{options[:name]}" if options[:verbose]
+					$logger.debug "Проверяю данные #{options[:name]}" if options[:verbose]
 					raise BadName if (server = TaskNode[name: options[:name]]).nil?
 					raise BadHost if ! server.check!
-					puts "\t\t Сервер #{options[:name]} проверку прошёл" if options[:verbose]
+					$logger.info "\t\t Сервер #{options[:name]} проверку прошёл"
 				when :listing
 					raise EmptyList if TaskNode.count == 0
 					nodes = TaskNode.all.collect{|node| [node.status, node.name, node.host, node.port, node.path, node.descr, node.users.collect{|u| u.name.empty? ? u.login : u.name } ]}
@@ -166,7 +170,7 @@ begin
 		when :user
 			case options[:action]
 				when :del
-					logger.info "Удаляю пользователя #{options[:name]}"
+					$logger.info "Удаляю пользователя #{options[:name]}"
 					User[login: options[:name]].delete
 				when :listing
 					raise EmptyList if User.count == 0
@@ -185,7 +189,7 @@ begin
 	end
 
 	if options.key?(:users)
-	logger.info "Добавляю пользователей: [#{options[:users].inspect}]" if options[:verbose]
+	$logger.info "Добавляю пользователей: [#{options[:users].inspect}]"
 		options[:users].each do |creds|
 			raise BadUser if User[login: login, key: keyfile] || User[name: name, login: login]
 			user = User.create creds
@@ -193,23 +197,23 @@ begin
 		end
 	end
 	rescue BadUser => e
-		puts "\t\t Неправильный пользователь" if options[:verbose]
+		$logger.error "\t\t Неправильный пользователь"
 		e.user.checked_bad!
 		exit 5
 	rescue BadHost => e
-		puts "\t\t Сервер #{options[:name]} не отвечает" if options[:verbose]
+		$logger.error "\t\t Сервер #{options[:name]} не отвечает"
 		e.checked_bad!
 		exit 4
 	rescue EmptyList => e
-		puts "\t\t Никого нет" if options[:verbose]
+		$logger.error "\t\t Никого нет"
 		exit 3
 	rescue BadName => e
-		puts "\t\t Имя #{options[:name]} не найдено в базе" if options[:verbose]
+		$logger.error "\t\t Имя #{options[:name]} не найдено в базе"
 		exit 2
 end
 # логинимся для проверки и копируем туда-оттуда файлик
 server.check! unless server.nil?
 if ! server.nil? && ! server.check!
-	logger.warn "Невозможно проверить корректность новой записи.\n#{options}\n#{server.inspect}" if options[:verbose]
+	$logger.warn "Невозможно проверить корректность новой записи.\n#{options}\n#{server.inspect}"
 	exit 1
 end

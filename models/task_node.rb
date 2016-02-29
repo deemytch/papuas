@@ -1,9 +1,12 @@
 class TaskNode < Server
   one_to_many :tasks
-#  many_to_many :users, :join_table => :servers_users, :left_key => :server_id
   def check!
+		puts "#{name} check! :#{users.count}"
     users.each do |user|
-      login_with(user){|ssh| ssh.exec! %{/bin/bash -lc 'whoami'}}
+			puts "Попытка зайти #{user.login}@#{host}:#{port}"
+      login_with(user){|ssh| out = ssh.exec! %{/bin/bash -lc 'whoami'}}
+      puts "> #{out}"
     end
+    self.checked_ok!
   end
 end

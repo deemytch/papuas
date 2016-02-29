@@ -24,7 +24,7 @@ Sequel::Model.plugin :update_refresh
 Sequel::Model.plugin :auto_validations, :not_null=>:presence
 Sequel::Model.plugin :polymorphic
 Sequel::Model.plugin :schema
-%w[task_report user task server servers_user].each{|src| require_relative "models/#{src}.rb" }
+%w[workflow_sequel task_report user task server servers_user].each{|src| require_relative "models/#{src}.rb" }
 
 if use_force
   DB << "SET foreign_key_checks = 0" <<

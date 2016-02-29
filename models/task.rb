@@ -1,4 +1,8 @@
+require 'workflow'
+
 class Task < Sequel::Model
+  include Workflow
+  
   set_schema do
     primary_key :id
     Integer :source_node_id, null: false, index: true
@@ -17,4 +21,13 @@ class Task < Sequel::Model
   many_to_one :source_node
   one_to_many :task_reports
   many_to_many :task_nodes, :join_table => :task_reports
+	workflow do
+		state :new do
+		end
+		state :active do
+		end
+		state :done
+		state :deleted
+	end
+
 end

@@ -1,15 +1,19 @@
 #!/usr/bin/ruby
-require 'optparse'
-require 'sequel'
-require_relative 'models/config.rb'
-DB = Sequel.mysql $cfg[:mysql]
-Sequel::Model.plugin :validation_helpers
-Sequel::Model.plugin :timestamps
-Model.plugin :auto_validations, :not_null=>:presence
-%w[user task task_report node source_path].each{|model| puts model; require_relative "models/#{model}.rb" }
+require_relative 'config.rb'
+Config.start
 
-# Сначала пингуем наличие серверов и ищем есть ли новые задачи
-SourcePath[status: [:active, :failed]].each{|src| src.check! ; src.load_tasks! }
-Node[status: [:active, :failed]].each{|n| n.check! }
-# Теперь можно и позапускать всё
-Task[:status => :new].each{|task| task.doit! }
+while true do
+	# Сначала пингуем наличие серверов и ищем есть ли новые задачи
+	puts "источников #{SourceNode.with_active_state.count}"
+	SourceNode.where(status: [:new, :active, :failed]).each{|src| src.check! }
+
+	puts "узлов #{TaskNode.with_active_state.count}"
+	TaskNode.where(status: [:new, :active, :failed]).each{|n| n.check! }
+
+	SourceNode.with_active_state.each{|src| src.load_tasks! }
+	
+	# Теперь можно и позапускать всё
+	puts "задач #{Task.with_new_state.count}"
+	Task.where(:status => :new).each{|task| task.doit! }
+	sleep $cfg[:global][:query_delay]
+end

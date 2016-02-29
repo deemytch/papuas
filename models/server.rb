@@ -6,9 +6,12 @@ class Server < ActiveRecord::Base
 	include Workflow
 	workflow_column :status
 
-	has_many :task_reports
-	has_many :users_servers
-		has_many :users, :through => :users_servers
+	has_many :task_reports, :dependent => :destroy
+	has_many :users_servers, :dependent => :destroy
+		has_many :users, :through => :users_servers, :dependent => :destroy
+	validates :name, uniqueness: true
+	before_validation :name_and_host
+	before_destroy :remove_habtm
 
 	workflow do
 		state :new do
@@ -28,11 +31,22 @@ class Server < ActiveRecord::Base
 			puts "#{kindof}:#{name} переход #{f} -> #{t}"
 		end
 	end
-	def login_with(user, &block)
+	def login_with(user = nil, &block)
 		data = {}
-		data[:key] = key if user.key
-		data[:password] = password if user.password
-		data[:username] = user.login unless user.nil?
+		if user.present?
+			data[:key] = key if user.key
+			data[:username] = user.login unless user.login
+		end
 		Net::SSH.start(host, data){ yield}
+	end
+
+	private
+	def remove_habtm
+		puts "Server.remove_habtm"
+		users_servers.all.each{|us| us.destroy }
+	end
+	def name_and_host
+		self.host = name if host.nil?
+		self.name = host if name.nil?
 	end
 end

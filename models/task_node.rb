@@ -4,14 +4,19 @@ require 'workflow'
 class TaskNode < Server
 	has_many :tasks_reports
 		has_many :tasks, :through => :tasks_reports
+	validate :check!
 
 	def check!
-		puts "#{name} check! :#{users.count}"
+		$logger.debug "#{name} check! :#{users.count}"
 		users.each do |user|
-			puts "Попытка зайти #{user.login}@#{host}:#{port}"
+			$logger.debug "Попытка зайти #{user.login}@#{host}:#{port}"
 			login_with(user){|ssh| out = ssh.exec! %{/bin/bash -lc 'whoami'}}
-			puts "> #{out}"
+			$logger.debug "> #{out}"
 		end
-		self.checked_ok!
+		if self.id.nil?
+			self.status = :active
+		else
+			checked_ok!
+		end
 	end
 end

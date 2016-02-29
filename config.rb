@@ -16,8 +16,9 @@ module Config
   def self.start
     $base ||= File.expand_path(File.dirname(__FILE__))
     $cfg = YAML.load_file("#{$base}/config/global.yml").symkeys
-    $logger = Logger.new $cfg[:global][:log]
-    $logger.level = :error
+    # $logger = Logger.new eval('"' + $cfg[:global][:log] + '"')
+    $logger = Logger.new STDERR
+    $logger.level = :debug
 
     ENV["BUNDLE_GEMFILE"] ||= "#{$base}/Gemfile"
     require "rubygems"
@@ -32,7 +33,7 @@ module Config
     require 'sshkit'
 
     $db = ActiveRecord::Base.establish_connection($cfg[:mysql][:development])
-    %w[errors task_report user task server servers_user source_node task_node].each do |src|
+    %w[parser errors task_report user task server users_server source_node task_node].each do |src|
       require_relative "#{$base}/models/#{src}.rb"
     end
   end

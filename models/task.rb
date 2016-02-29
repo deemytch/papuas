@@ -6,7 +6,7 @@ class Task < ActiveRecord::Base
 	workflow_column :status
 
 	belongs_to :source_node
-	has_many	:task_reports
+	has_many	:task_reports, :dependent => :destroy
 		has_many :task_nodes, :through => :task_reports
 	
 	workflow do

@@ -13,11 +13,11 @@ class Hash
 end
 
 module Config
-  def self.start
+  def self.start(app = :appsetup)
     $base ||= File.expand_path(File.dirname(__FILE__))
     $cfg = YAML.load_file("#{$base}/config/global.yml").symkeys
     # $logger = Logger.new eval('"' + $cfg[:global][:log] + '"')
-    $logger = Logger.new STDERR
+    $logger = Logger.new $cfg[app][:log]
     $logger.level = :debug
 
     ENV["BUNDLE_GEMFILE"] ||= "#{$base}/Gemfile"

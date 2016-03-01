@@ -15,8 +15,9 @@ require_relative './config.rb'
 Config.start
 options = Parser.options
 
-if options.key? :verbose
+if options.key?(:verbose)
 	$logger.level = options[:verbose]
+	puts "Уровень разговорчивости #{$logger.level}"
 	$logger.info "Уровень разговорчивости #{$logger.level}"
 end
 
@@ -52,7 +53,7 @@ begin
 					server = TaskNode.create options.with_keys(:name, :host, :port)
 				when :mod
 					raise BadName if (server = TaskNode.find_by(name: options[:name])).nil?
-					server.set_fields options, :name, :host, :port
+					server.update_attributes options.with_keys(:name, :host, :port)
 					server.save
 				when :del
 					raise BadName if (server = TaskNode.find_by(name: options[:name])).nil?
@@ -92,7 +93,7 @@ begin
 	end
 
 	if options.key?(:users)
-	$logger.info "Добавляю пользователей: [#{options[:users].inspect}]"
+	$logger.info "Добавляю пользователей: #{options[:users].inspect}"
 		options[:users].each do |creds|
 			raise BadUser if User.find_by(login: creds[:login], key: creds[:keyfile]).present? &&
 				User.find_by(name: creds[:name], login: creds[:login]).present?

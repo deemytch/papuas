@@ -3,6 +3,7 @@ class Parser
 "Примеры:
 	# Добавить источник borman, сервер op01 есть в .ssh/config, но порт и логин другие
 	#{$0} -S borman -a -u borman -n op01 -p 6897 -d /home/borman/a/tasks
+
 	# Удалить бормана
 	#{$0} -N borman -r
 
@@ -10,10 +11,7 @@ class Parser
 	#{$0} -S borman -a -n op01 -d /home/borman/a/tasks
 	
 	# Добавить источник, приватный ключ в файле privkey_borman.pem в текущей папке
-	#{$0} -S borman -a -u borman -k privkey_borman.pem -n op01 -p 6897 -d /home/borman/a/tasks
-	
-	# Удалить источник борман
-	#{$0} -S borman -r 
+	#{$0} -S schtirliez -a -u borman -k privkey_borman.pem -n op01 -p 6897 -d /home/borman/a/tasks
 	
 	# Поменять настройки бормана, теперь все задачи пишет Аня
 	#{$0} -S borman -m -u anja -d /home/borman/anja/tmp
@@ -29,6 +27,7 @@ class Parser
 	end
 # обрабатываем опции и записываем что сделать
 	@@options = {}
+	lvls = %w[debug notice warn error fatal]
 	OptionParser.new do |parser|
 		parser.on('-S', '--source [name]', String, 'Работа с источниками задач') do |name|
 			@@options[:ctrl] ||= :source
@@ -89,12 +88,17 @@ class Parser
 		parser.on('-P', '--publish [sourcename]', String, "Публикация справочника с целевыми узлами и логинами\n\t\t\t\t\tна каждый источник в файл *nodes.listing.yml*") do
 			@@options[:ctrl] = :publish
 		end
-		parser.on('-v', '--verbose', 'Разговорчивый режим')do
-			@@options[:verbose] ||= 0
-			@@options[:verbose] += 1
+		parser.on('-v', '', 'Разговорчивый режим, чтобы усилить - добавь ещё "v"') do
+			@@options[:verbose] ||= Logger::FATAL + 1
+			@@options[:verbose] -= 1
+			@@options[:verbose] = 0 if @@options[:verbose] < 0
+		end
+		parser.on('', '--verbose level', String, 'Уровень разговорчивости [debug|notice|warn|error|fatal]') do |elevel|
+			@@options[:verbose] = lvls.find_index(elevel) if lvls.include?(elevel)
 		end
 		parser.on('-h', '--help', 'Справка'){ puts "#{parser}\n#{helptext}"; exit }
 	end.parse!
+
 	def self.options
 		@@options
 	end

@@ -16,15 +16,15 @@ class Server < ActiveRecord::Base
 	workflow do
 		state :new do
 			event :checked_ok, :transition_to => :active
-			event :ckecked_bad, :transition_to => :failed
+			event :checked_bad, :transition_to => :failed
 		end
 		state :active do
 			event :checked_ok, :transition_to => :active
-			event :ckecked_bad, :transition_to => :failed
+			event :checked_bad, :transition_to => :failed
 		end
 		state :failed do
 			event :checked_ok, :transition_to => :active
-			event :ckecked_bad, :transition_to => :failed
+			event :checked_bad, :transition_to => :failed
 		end
 		state :deleted
 		on_transition do |f,t,e, *ea|
@@ -32,12 +32,14 @@ class Server < ActiveRecord::Base
 		end
 	end
 	def login_with(user = nil, &block)
-		data = {}
+		data = { timeout: $cfg[:global][:timeout] }
 		if user.present?
 			data[:key] = key if user.key
 			data[:username] = user.login unless user.login
 		end
 		Net::SSH.start(host, data){ yield}
+	rescue Net::SSH::ConnectionTimeout
+		self.checked_bad!
 	end
 
 	private

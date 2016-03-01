@@ -10,7 +10,12 @@ mysql:
         database: pjreq
         username: pjreq
         password: ababagalamaga
-
 global:
     query_delay: 300 # интервал опроса исходников
+    timeout: 30
+dbsetup:
+    log: #{STDERR}
+appsetup:
+    log: #{STDERR}
+bigbro:
     log: log/bigbro-#{Time.now.strftime "%s"}

@@ -1,6 +1,6 @@
 #!/usr/bin/ruby
 require_relative 'config.rb'
-Config.start
+Config.start(:bogbro)
 
 while true do
 	# Сначала пингуем наличие серверов и ищем есть ли новые задачи

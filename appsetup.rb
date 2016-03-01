@@ -40,6 +40,17 @@ begin
 					$logger.info "Удаляю узел-источник #{options[:name]}"
 					server = SourceNode.find_by name: options[:name]
 					server.delete
+				when :check
+					$logger.debug "Проверяю данные #{options.key?(:name) ? options[:name] : 'всех источников'}"
+					names = options.key?(:name) ? 
+						((options[:name] =~ /,/) ? options[:name].split(',') : [options[:name]]) :
+						SourceNode.where.not(:status => :deleted).pluck(:name)
+					names.each do |nn|
+						raise BadName if (server = SourceNode.find_by(name: options[:name])).nil?
+						server.check!
+						$logger.info "\t\t Сервер #{options[:name]} проверку #{'не' unless server.active?} прошёл"
+					end
+					exit 0
 				when :listing
 					raise EmptyList if SourceNode.count == 0
 					servers = SourceNode.all.collect{|node| [node.status, node.name, node.host, node.port, node.path, node.descr, node.users.collect{|u| u.name.empty? ? u.login : u.name }]}
@@ -59,10 +70,16 @@ begin
 					raise BadName if (server = TaskNode.find_by(name: options[:name])).nil?
 					server.destroy
 				when :check
-					$logger.debug "Проверяю данные #{options[:name]}"
-					raise BadName if (server = TaskNode.find_by(name: options[:name])).nil?
-					raise BadHost if ! server.check!
-					$logger.info "\t\t Сервер #{options[:name]} проверку прошёл"
+					$logger.debug "Проверяю данные #{options.key?(:name) ? options[:name] : 'всех узлов'}"
+					names = options.key?(:name) ? 
+						((options[:name] =~ /,/) ? options[:name].split(',') : [options[:name]]) :
+						TaskNode.where.not(:status => :deleted).pluck(:name)
+					names.each do |nn|
+						raise BadName if (server = TaskNode.find_by(name: options[:name])).nil?
+						server.check!
+						$logger.info "\t\t Сервер #{options[:name]} проверку #{'не' unless server.active?} прошёл"
+					end
+					exit 0
 				when :listing
 					raise EmptyList if TaskNode.count == 0
 					nodes = TaskNode.all.collect{|node| [node.id, node.status, node.name, node.host, node.port, node.path, node.descr, node.users.pluck(:name) ]}

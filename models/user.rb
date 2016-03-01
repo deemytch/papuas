@@ -6,8 +6,10 @@ class User < ActiveRecord::Base
 	workflow_column :status
 	before_validation :set_login
 	before_destroy :remove_habtm
+	validates :name, presence: true, uniqueness: true
 	validate :name_or_login
 	validate :unique_user
+	after_save :check!
 
 	has_many :users_servers, :dependent => :destroy
 		has_many :servers, :through => :users_servers
@@ -21,7 +23,7 @@ class User < ActiveRecord::Base
 	workflow do
 		state :new do
 			event :check_passed, :transition_to => :active
-			event :check_failed, :transition_to => :failed
+			event :check_failed, :transition_to => :deleted
 		end
 		state :active do
 			event :check_passed, :transition_to => :active
@@ -41,14 +43,17 @@ class User < ActiveRecord::Base
 		errors.add :name, 'Имя или логин должны быть' if (login.nil? || login.empty?) && (name.nil? || name.empty?)
 	end
 	def unique_user
-		errors.add :name, "Имя, логин и ключ вместе не должны повторяться" if User.where(name: name, login: login, key: key, id: id).count > 1
+		errors.add :name, "Имя, логин и ключ вместе не должны повторяться" if User.where(name: name, login: login, key: key).where.not(id: id).count > 0
 	end
 	def set_login
 		self.name = login if name.nil? || name.empty?
 		self.login = name if login.nil? || login.empty?
 	end
 	def remove_habtm
-		puts "User.remove_habtm"
-		users_servers.all.each{|us| us.destroy }
+		$logger.debug "User #{id} remove_habtm"
+		self.users_servers.all.each{|us| us.destroy }
+	end
+	def check!
+		servers.each{|s| s.check!(self) }
 	end
 end

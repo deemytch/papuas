@@ -51,8 +51,9 @@ class Parser
 		parser.on('-r', '--rm', String, 'удаление записи') do |name|
 			@@options[:action] ||= :del
 		end
-		parser.on('-c', '--check', String, 'проверить правильность настроек записи (сервера или пользователя)') do |name|
+		parser.on('-c', '--check [name]', String, 'проверить правильность настроек записи (сервера или пользователя)') do |name|
 			@@options[:action] = :check
+			@@options[:name] = name
 		end
 		parser.on('-l', '--list', 'Показать список'){ @@options[:action] ||= :listing }
 		

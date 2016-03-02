@@ -36,5 +36,8 @@ module Config
     %w[parser errors task_report user task server users_server source_node task_node].each do |src|
       require_relative "#{$base}/models/#{src}.rb"
     end
+    # чистка мусора
+    User.with_deleted_state.each{|u| u.destroy }
+    Server.with_deleted_state.each{|s| s.destroy }
   end
 end

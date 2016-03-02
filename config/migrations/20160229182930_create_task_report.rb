@@ -3,6 +3,7 @@ class CreateTaskReport < ActiveRecord::Migration
 		create_table :task_reports do |t|
 			t.references :task, null: false, index: true, foreign_key: true
 			t.references :task_node, null: false, index: true
+			t.references :user, index: true
 			t.integer	 :retcode
 			t.string		:stdout_log
 			t.string		:stderr_log

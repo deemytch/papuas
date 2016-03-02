@@ -112,9 +112,7 @@ begin
 	if options.key?(:users)
 	$logger.info "Добавляю пользователей: #{options[:users].inspect}"
 		options[:users].each do |creds|
-			raise BadUser if User.find_by(login: creds[:login], key: creds[:keyfile]).present? &&
-				User.find_by(name: creds[:name], login: creds[:login]).present?
-			user = User.create creds
+			user = User.find_or_create_by(creds)
 			server.users << user
 		end
 	end

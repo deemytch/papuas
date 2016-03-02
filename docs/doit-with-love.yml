@@ -1,9 +1,9 @@
 # образец постановки задачи
 # на node1 заходим под юзером masha и так далее
 servers:
-  node1: masha
-  node2: masha
-  noda3: volodymyr
+  node1name: masha
+  jboss: masha
+  node3: volodymyr
 # путь к срипту относительно папки, заданной в настройках
 script: jbosdeinst/rmrf.sh
 files:

@@ -13,6 +13,7 @@ mysql:
 global:
     query_delay: 300 # интервал опроса исходников
     timeout: 30
+    tmpdir: /tmp
 dbsetup:
     log: #{STDERR}
 appsetup:

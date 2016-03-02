@@ -6,7 +6,6 @@ class Server < ActiveRecord::Base
 	include Workflow
 	workflow_column :status
 
-	has_many :task_reports, :dependent => :destroy
 	has_many :users_servers, :dependent => :destroy
 		has_many :users, :through => :users_servers, :dependent => :destroy
 	validates :name, presence: true, uniqueness: true
@@ -33,10 +32,6 @@ class Server < ActiveRecord::Base
 	end
 	def login_with(user = nil, &block)
 		data = { timeout: $cfg[:global][:timeout], :auth_methods=>%w[publickey hostbased] }
-		if user.present?
-#			data[:key] = user.key if user.key
-			data[:user] = user.login unless user.login
-		end
 		Net::SSH.start(host, user.try(:login), data){ yield }
 	end
 	def me_not_valid!

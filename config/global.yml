@@ -1,13 +1,19 @@
 mysql:
-    development:
+    default: &default
         adapter: mysql2
         encoding: utf8
         pool: 25
-        schema_search_path: timebay
         connect_timeout: 1500
         read_timeout: 1500
         write_timeout: 1500
+    development:
+        <<: *default
         database: pjreq
+        username: pjreq
+        password: ababagalamaga
+    test:
+        <<: *default
+        database: pjreq_test
         username: pjreq
         password: ababagalamaga
 global:
@@ -15,8 +21,8 @@ global:
     timeout: 30
     tmpdir: /tmp
 dbsetup:
-    log: #{STDERR}
+    log: '#{$stderr}'
 appsetup:
-    log: #{STDERR}
+    log: '#{$stderr}'
 bigbro:
-    log: log/bigbro-#{Time.now.strftime "%s"}
+    log: log/bigbro-#{ Time.now.strftime "%s" }

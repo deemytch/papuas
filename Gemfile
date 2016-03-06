@@ -15,3 +15,5 @@ gem 'tty'
 gem 'net-ssh'
 gem 'sshkit'
 gem 'net-sftp'
+
+gem 'rspec'

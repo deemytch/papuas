@@ -1,5 +1,5 @@
 require_relative './config.rb'
-Config.start
+Config.start(:dbsetup)
 
 require 'yaml'
 require 'logger'
@@ -65,13 +65,13 @@ namespace :db do
   end
  
   task :environment do
-    DATABASE_ENV = ENV['DATABASE_ENV'] || 'development'
+    DATABASE_ENV = (ENV['DATABASE_ENV'] || 'development').to_sym
     MIGRATIONS_DIR = ENV['MIGRATIONS_DIR'] || 'config/migrations'
   end
 
   task :configuration => :environment do
-    @config = $cfg[:mysql][DATABASE_ENV.to_sym]
-    puts "db: #{$cfg[:mysql][:development][:database]}"
+    @config = $cfg[:mysql][DATABASE_ENV]
+    puts "db: #{$cfg[:mysql][DATABASE_ENV][:database]}"
   end
 
   task :configure_connection => :configuration do

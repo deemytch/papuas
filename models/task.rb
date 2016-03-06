@@ -52,9 +52,13 @@ class Task < ActiveRecord::Base
 		end
 		# мало ли какие файлы там надо скопировать, на всякий случай не буду их тащить в базу
 		Net::SCP.start(source_node.host, source_node.users.last.login, sshdata) do |scp|
+			self.data ||= Dir.mktmpdir "task-#{id}-", $cfg[:global][:tmpdir] # может уже всё есть?
 			self.script = scp.download "#{source_node.path}/#{settings['script']}"
+			scriptname = Pathname.new(settings['script']).basename
+			File.new "#{data}/#{scriptname}", 'w' do |f|
+				f.write script
+			end
 			if settings.key?('files')
-				self.data ||= Dir.mktmpdir "task-#{id}-", $cfg[:global][:tmpdir] # может уже всё есть?
 				settings['files'].each do |fdata|
 					scp.download "#{source_node.path}/#{fdata}", data
 				end

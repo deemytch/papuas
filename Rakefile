@@ -1,12 +1,18 @@
-require_relative './config.rb'
-Config.start(:dbsetup)
-
 require 'yaml'
 require 'logger'
+require 'pathname'
+
+$base = Pathname.new(__FILE__).dirname.expand_path
+ENV["BUNDLE_GEMFILE"] ||= "#{$base}/Gemfile"
+require "rubygems"
+require "bundler/setup"
+    
 require 'active_record'
 require 'active_support'
 require 'active_support/inflector'
 require 'mysql2'
+
+require_relative 'models/hash'
 
 namespace :m do
   desc "Создание пустого файла миграции для класса ClassName"
@@ -34,34 +40,36 @@ end
 
 namespace :db do
   def create_database config
-    options = {:charset => 'utf8', :collation => 'utf8_unicode_ci'}
 
-    create_db = lambda do |config|
-      ActiveRecord::Base.establish_connection config.merge(:database => nil)
-      ActiveRecord::Base.connection.create_database config[:database], options
-      ActiveRecord::Base.establish_connection config
-    end
+    create_db = Proc.new {
+      sql_user = <<~SQL_USER
+        CREATE USER IF NOT EXISTS #{config[:username]} IDENTIFIED BY '#{config[:password]}';
+        FLUSH PRIVILEGES;
+      SQL_USER
+      sql_db = "CREATE DATABASE IF NOT EXISTS #{config[:database]};"
+      sql_grant = <<~SQLGRANT
+          GRANT ALL PRIVILEGES ON #{config[:database]}.* 
+            TO '#{config[:username]}'
+            IDENTIFIED BY '#{config[:password]}';
+      SQLGRANT
 
-    begin
-      create_db.call config
+      `mysql -u root -Nse "#{sql_user}"`
+      `mysql -u root -Nse "#{sql_db}"`
+      `mysql -u root -Nse "#{sql_grant}"`
+    }
+
+    create_db.call config
     rescue Mysql2::Error => sqlerr
+      puts "Ошибка номер #{sqlerr.errno}"
       if sqlerr.errno == 1405
         print "#{sqlerr.error}. \nPlease provide the root password for your mysql installation\n>"
         root_password = $stdin.gets.strip
-
-        grant_statement = <<-SQL
-          GRANT ALL PRIVILEGES ON #{config[:database]}.* 
-            TO '#{config[:username]}'@'localhost'
-            IDENTIFIED BY '#{config[:password]}' WITH GRANT OPTION;
-        SQL
-
         create_db.call config.merge(:database => nil, :username => 'root', :password => root_password)
       else
         $stderr.puts sqlerr.error
         $stderr.puts "Couldn't create database for #{config.inspect}, charset: utf8, collation: utf8_unicode_ci"
         $stderr.puts "(if you set the charset manually, make sure you have a matching collation)" if config[:charset]
       end
-    end
   end
  
   task :environment do
@@ -70,6 +78,7 @@ namespace :db do
   end
 
   task :configuration => :environment do
+    $cfg = YAML.load_file("#{$base}/config/global.yml").symkeys
     @config = $cfg[:mysql][DATABASE_ENV]
     puts "db: #{$cfg[:mysql][DATABASE_ENV][:database]}"
   end

@@ -13,19 +13,19 @@ class TaskReport < ActiveRecord::Base
 
 	workflow do
 		state :new do
-			event :check_passed, :transition_to => :ready
-			event :check_failed, :transition_to => :failed
+			event :passed, :transition_to => :ready
+			event :failed, :transition_to => :fail
 		end
 		state :ready do
-			event :letsgo, :transition_to => :running
-			event :cancel, :transition_to => :failed
+			event :power, :transition_to => :processing
+			event :cancel, :transition_to => :fail
 		end
-		state :running do
+		state :processing do
 			event :allright, :transition_to => :done
-			event :crashed, :transition_to => :failed
+			event :failed, :transition_to => :fail
 		end
 		state :done
-		state :failed
+		state :fail
 	end
 # временные аттрибуты
 	def sshsession=(sess)

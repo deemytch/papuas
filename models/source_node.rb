@@ -1,6 +1,6 @@
 require 'net/scp'
 
-class SourceNode < Server
+class SourceNode < ServerAccount
 	has_many :tasks
 	has_many :task_reports, :through => :tasks, :dependent => :destroy
 	after_save :check!
@@ -36,9 +36,9 @@ class SourceNode < Server
 		end
 	rescue Net::SFTP::Error => e
 		$logger.warn "Ошибка копирования файлов #{e}"
-		checked_bad!
+		failed!
 	rescue Net::SSH::ConnectionTimeout => e
 		$logger.warn "Ошибка подключения #{e}"
-		checked_bad!
+		failed!
 	end
 end

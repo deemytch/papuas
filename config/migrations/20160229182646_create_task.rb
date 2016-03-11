@@ -8,10 +8,10 @@ class CreateTask < ActiveRecord::Migration
 		t.string   :descr
 		t.datetime :started_at
 		t.datetime :stopped_at
-		t.column   :status, "enum('new', 'active', 'done', 'failed')", :default => 'new', null: false, index: true
+		t.column   :status, "enum('new', 'ready', 'processing', 'done', 'fail', 'deleted')", :default => 'new', null: false, index: true
 		
       t.timestamps null: false
     end
-    add_foreign_key :tasks, :servers, :column => :source_node_id
+    add_foreign_key :tasks, :server_accounts, :column => :source_node_id
   end
 end

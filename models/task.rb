@@ -22,18 +22,18 @@ class Task < ActiveRecord::Base
 
 	workflow do
 		state :new do
-			event :check_passed, :transition_to => :ready
-			event :check_failed, :transition_to => :deleted
+			event :passed, :transition_to => :ready
+			event :failed, :transition_to => :deleted
 		end
 		state :ready do
 			event :started, :transition_to => :processing
-			event :check_failed, :transition_to => :new
+			event :failed, :transition_to => :new
 		end
 		state :processing do
 			event :all_right, :transition_to => :done
 			event :task_failed, :transition_to => :failed
 		end
-		state :failed do
+		state :fail do
 			event :restart, :transition_to => :ready
 			event :remove, :transition_to => :deleted
 		end

@@ -17,12 +17,13 @@ mysql:
         username: pjreq
         password: ababagalamaga
 global:
-    query_delay: 300 # интервал опроса исходников
+    query_delay: 30 # интервал опроса исходников
     timeout: 30
     tmpdir: /tmp
 dbsetup:
-    log: '#{$stderr}'
+    log:  STDERR
 appsetup:
-    log: '#{$stderr}'
+    log:  STDERR
+    publish: nodes.listing.yml
 bigbro:
     log: log/bigbro-#{ Time.now.strftime "%s" }

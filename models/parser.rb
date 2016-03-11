@@ -1,106 +1,127 @@
+require_relative 'listing'
+
 class Parser
 	def self.helptext
-"Примеры:
-	# Добавить источник borman, сервер op01 есть в .ssh/config, но порт и логин другие
-	#{$0} -S borman -a -u borman -n op01 -p 6897 -d /home/borman/a/tasks
+		<<-HELPTEXT
+Примеры:
+	# Добавить источник borman@op01
+	#{$0} -S borman@op01:/home/borman/tasks -k /home/borman/borman_rsa -n
 
-	# Удалить бормана
-	#{$0} -N borman -r
+	# Удалить бормана@op01
+	#{$0} -R borman@op01
 
-	# Добавить источник borman, все настройки сервера op01 есть в .ssh/config
-	#{$0} -S borman -a -n op01 -d /home/borman/a/tasks
+	# Добавить целевой сервер user@glassfish
+	#{$0} -N user@glassfish:4444/home/user/site/tasks
 	
-	# Добавить источник, приватный ключ в файле privkey_borman.pem в текущей папке
-	#{$0} -S schtirliez -a -u borman -k privkey_borman.pem -n op01 -p 6897 -d /home/borman/a/tasks
+	#Добавить целевой узел jboss.co.spb, порт 2222, перечислен список логинов и соответствующих ключей
+	#{$0} -N oivan@jboss.co.spb:2222/home/oivan -k /z/data/keys/oivan/rsa_id --nodename jboss \
+	      -N jboss -l peterk -k /z/data/keys/peterk_rsakey.pem
 	
-	# Поменять настройки бормана, теперь все задачи пишет Аня
-	#{$0} -S borman -m -u anja -d /home/borman/anja/tmp
-	
-	# Добавить целевой узел jboss.co.spb, порт 2222, перечислен список логинов и соответствующих ключей
-	# ключ для Васи по умолчанию или указан в .ssh/config
-	#{$0} -N jboss-spb -a -u gregor -k privkey_gregor.rsa\\
-	 -u manja -k privkey_manja.pem --realname Марин\\ Блюмкин -u vasja -n jboss.co.spb -p 2222
-	
+	#peterk - Петя Каблуков
+	#{$0} -U peterk --realname 'Петя Каблуков'
+
+	#op01 - IBM/360 в Самаре
+	#{$0} -N op01 --descr 'IBM/360 в Самаре'
+
 	# На узел jboss теперь может заходить ещё и Ли Хуан
-	#{$0} -U lihuan -a --nodename jboss-spb -u lihuan -k huanli_privkey --realname 'Li Khuan'
-"
+	#{$0} -N lihuan@jboss-spb:2222 -k huanli_privkey --realname 'Li Khuan'
+
+	# Посмотреть все источники
+	#{$0} -N
+
+HELPTEXT
 	end
-# обрабатываем опции и записываем что сделать
-	@@options = {}
+=begin
+  обрабатываем опции и записываем что сделать
+  список действий с параметрами
+	[ { action=:add|:rm|:mod,
+
+		t: class
+		uri: "ssh://" + URI
+		}]
+=end
+	@@options = []
+	@@verbose = Logger::FATAL + 1
 	lvls = %w[debug notice warn error fatal]
 	OptionParser.new do |parser|
-		parser.on('-S', '--source [name]', String, 'Работа с источниками задач') do |name|
-			@@options[:ctrl] ||= :source
-			@@options[:name] = name
-		end
-		parser.on('-N', '--node [name]', String, 'Работа с узлами назначения') do |name|
-			@@options[:ctrl] ||= :node
-			@@options[:name] = name
-		end
-		parser.on('-U', '--user [name]', String, 'Работа с пользователями') do |name|
-			@@options[:ctrl] ||= :user
-			@@options[:name] = name
-		end
-
-		parser.on('-a', '--add', String, 'добавление записи')do |name|
-			@@options[:action] ||= :add
-		end
-		parser.on('-m', '--mod', String, 'изменение записи') do |name|
-		  @@options[:action] ||= :mod
-		end
-		parser.on('-r', '--rm', String, 'удаление записи') do |name|
-			@@options[:action] ||= :del
-		end
-		parser.on('-c', '--check [name]', String, 'проверить правильность настроек записи (сервера или пользователя)') do |name|
-			@@options[:action] = :check
-			@@options[:name] = name
-		end
-		parser.on('-l', '--list', 'Показать список'){ @@options[:action] ||= :listing }
-		
-		parser.on('-u', '--login name', String, 'Имя пользователя (login)') do |name|
-			@@options[:users] ||= []
-			@@options[:users] << { name: name }
-		end
-		parser.on('-e', '--realname имя-пользователя', String, 'Настоящее имя пользователя') do |name|
-			@@options[:users] ||= []
-			if @@options[:users].empty? || @@options[:users].last.key?(:name)
-				@@options[:users] << { name: name }
+		parser.on('-S [URI]', '--source [URI]', String, 'Работа с источниками задач') do |uri|
+			unless uri.nil?
+				@@options << { :action => :add, :t => SourceNode, params: { uri: "ssh://#{uri}" }}
 			else
-				@@options[:users].last[:name] = name
+				puts Listing.list_sources
+				exit
 			end
 		end
-		parser.on('-k', '--key имя-файла', String, 'Имя файла с приватным ключом')do |fname|
-			@@options[:users] ||= []
-			if @@options[:users].empty? || @@options[:users].last.key?(:key)
-				@@options[:users] << { key: fname }
+		parser.on('-N [URI]', '--node [URI]', String, 'Работа с узлами назначения') do |uri|
+			unless uri.nil?
+				@@options << { :action => :add, :t => TaskNode, params: { uri: "ssh://#{uri}" }}
 			else
-				@@options[:users].last[:key] = fname
+				puts Listing.list_nodes
+				exit
 			end
 		end
-		
-		parser.on('-t', '--nodename name', String, 'Задать имя источника задач'){|name| @@options[:nodename] = name }
-		parser.on('-s', '--sourcename name', String, 'Задать имя узла назначения'){|name| @@options[:sourcename] = name }
-		
-		parser.on('-n', '--host hostname', String, 'Имя или адрес хоста'){|host| @@options[:host] = host }
-		parser.on('-d', '--dir папка', String, 'Путь, если необходимо'){|path| @@options[:path] = path }
-		parser.on('-p', '--port порт', String, 'Порт, по умолчанию 22'){|port| @@options[:port] = port }
-		parser.on('-i', '--descr описание', String, 'Дополнительная информация'){ |descr| @@options[:descr] = descr }
-		parser.on('-L', '--logrotate', 'Архивация и очистка базы'){ @@options[:ctrl] = :logrotate }
-		parser.on('-P', '--publish [sourcename]', String, "Публикация справочника с целевыми узлами и логинами\n\t\t\t\t\tна каждый источник в файл *nodes.listing.yml*") do
-			@@options[:ctrl] = :publish
+		parser.on('-U [name]', '--user [name]', String, 'Список аккаунтов') do |uri|
+			puts Listing.list_nodes
+			exit
 		end
-		parser.on('-v', '', 'Разговорчивый режим, чтобы усилить - добавь ещё "v"') do
-			@@options[:verbose] ||= Logger::FATAL + 1
-			@@options[:verbose] -= 1
-			@@options[:verbose] = 0 if @@options[:verbose] < 0
+		parser.on('-R NAME', '--rm NAME', String, 'удаление записи по имени или URI') do |name|
+			@@options << { :action => :del, params: name }
 		end
-		parser.on('', '--verbose level', String, 'Уровень разговорчивости [debug|notice|warn|error|fatal]') do |elevel|
-			@@options[:verbose] = lvls.find_index(elevel) if lvls.include?(elevel)
+		parser.on('-C [SERVER]', '--check [SERVER]', String, 'проверить правильность настроек записи (сервера и пользователя)') do |name|
+			@@options << ( name ? { :action => :check, name: name } : { action: :check } )
+		end
+		parser.on('-T [id|uri|name]', '--tasks [id|uri|name]', String, 'Вывести статус задач. Поиск по id задачи, адресу или имени сервера') do |i|
+				puts Listing.list_tasks(i)
+				exit
+		end
+		parser.on('-l login', '--login login', String, 'Имя пользователя (login)') do |login|
+			@@options.last[:params][:login] = login
+		end
+		parser.on('-n имя', '--name имя', String, 'Дать имя ресурсу') do |name|
+			@@options.last[:params][:name] = name
+		end
+		parser.on('-e ФИО', '--name ФИО', String, 'Задать настоящее имя пользователя') do |name|
+			@@options.last[:params][:realname] = name
+		end
+		parser.on('-k', '--key имя-файла', String, 'Имя файла с приватным ключом') do |fname|
+			@@options.last[:params][:key] = fname
+		end
+		parser.on('-n', '--host hostname', String, 'адрес хоста') do |host|
+			@@options.last[:params][:host] = host
+		end
+		parser.on('-d', '--dir папка', String, 'Путь') do |path|
+			@@options.last[:params][:path] = path
+		end
+		parser.on('-p', '--port порт', Integer, 'Порт') do |port|
+			@@options.last[:params][:port] = port
+		end
+		parser.on('-i описание', '--descr описание', String, 'Задать описание ресурса') do |descr|
+			@@options.last[:params][:descr] = descr
+		end
+		parser.on('-L', '--logrotate', 'Архивация и очистка базы') do
+			@@options << { :action => :logrotate }
+		end
+		parser.on('-P [NAME]', '--publish [NAME]', String, "Публикация справочника с целевыми узлами и логинами\n\t\t\t\t\tна каждый источник в файл *nodes.listing.yml*") do
+			@@options << { :action => :publish }
+		end
+		parser.on('-v level', '--verbose (debug|notice|warn|error|fatal)', 'Разговорчивый режим, чтобы усилить - добавь ещё "v"') do |level|
+			if level =~ /^(debug|notice|warn|error|fatal)$/
+				@@verbose = lvls.find_index(level) if lvls.include?(level)
+			else
+				@@verbose -= 1
+				@@verbose = 0 if @@verbose < 0
+			end
+		end
+		parser.on('-z', '--zap', 'Удалить все записи, со статусом "удалено"') do
+			@@options << { :action => :zap }
 		end
 		parser.on('-h', '--help', 'Справка'){ puts "#{parser}\n#{helptext}"; exit }
 	end.parse!
 
 	def self.options
 		@@options
+	end
+	def self.verbose
+		@@verbose
 	end
 end

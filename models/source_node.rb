@@ -3,7 +3,7 @@ require 'net/scp'
 class SourceNode < ServerAccount
 	has_many :tasks
 	has_many :task_reports, :through => :tasks, :dependent => :destroy
-	after_save :check!
+
 =begin
 Ищем на host/path все файлы с именем doit-*yml
 Грузим во временную папку
@@ -12,17 +12,16 @@ class SourceNode < ServerAccount
 Удаляем временную папку
 =end
 	def load_tasks!
-		login = (u = users.last).present? ? u.login : ''
-		data = { timeout: $cfg[:global][:timeout], :auth_methods=>%w[publickey hostbased] }
 		Dir.mktmpdir("source-node-#{id}-", $cfg[:global][:tmpdir]) do |tmp|
-			Net::SFTP.start(host, login, data) do |sftp|
+			$logger.debug "Создал временную папку #{tmp}"
+			Net::SFTP.start(host, login, sshparams) do |sftp|
 				sftp.dir.foreach(path) do |el|
 					# СДЕЛАТЬ: потом тут можно распараллелить, если понадобится
 					next unless el.name =~ /^doit-(.+)\.yml$/
 					$logger.info "Загружаю файл описания задачи #{path}\t#{el.longname}"
 					descr = $1
 					tf = sftp.download!("#{path}/#{el.name}")
-					task = Task.create taskfile: tf, source_node: self, descr: descr
+					task = Task.create taskfile: tf, source_node: self, descr: descr, tmpdir: tmp
 					unless task.present?
 						$logger.warn "Неправильный файл описания задачи #{login}@#{host}:#{port}/#{path}/#{el.name}"
 						next

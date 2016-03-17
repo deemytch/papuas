@@ -4,9 +4,7 @@ gem 'mysql2'
 gem 'daemons'
 
 gem 'activerecord'
-# gem 'sequel'
-# gem 'sequel_enum'
-# gem 'sequel_polymorphic'
+gem 'sidekiq'
 
 gem 'pry'
 gem 'workflow'

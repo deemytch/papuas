@@ -8,7 +8,7 @@ class CreateTaskReport < ActiveRecord::Migration
 			t.string		:stderr_log
 			t.datetime	:started_at
 			t.datetime	:stopped_at
-			t.column		:status, "enum('new', 'dirty', 'ready', 'processing', 'done', 'fail')", :default => 'new', null: false, index: true
+			t.string		:status, :default => 'new', null: false, index: true
 
 			t.timestamps null: false
 		end

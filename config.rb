@@ -1,12 +1,15 @@
 require 'yaml'
 require 'pathname'
 require 'logger'
+require_relative 'models/logger'
 require_relative 'models/hash'
+require_relative 'models/string'
 
 module Config
   def self.start(app = :appsetup)
+    $exitcode = 0
     $logger = Logger.new(STDERR)
-    $logger.level = :debug
+    $logger.level = :warn
     $base ||= File.expand_path(File.dirname(__FILE__))
     $cfg = YAML.load_file("#{$base}/config/global.yml").symkeys
     ENV["BUNDLE_GEMFILE"] ||= "#{$base}/Gemfile"
@@ -21,6 +24,19 @@ module Config
     require 'tty'
     require 'sshkit'
     require 'uri'
+    require 'sidekiq'
+
+    Sidekiq.configure_client do |config|
+      config.redis = {
+        :size => 1,
+        url: "redis://#{$cfg[:redis][:host]}:/#{$cfg[:redis][:db]}"
+      }
+    end
+    Sidekiq.configure_server do |config|
+      config.redis = {
+        url: "redis://#{$cfg[:redis][:host]}:/#{$cfg[:redis][:db]}"
+      }
+    end
 
     $database_env = (ENV['DATABASE_ENV'] || 'development').to_sym
     begin
@@ -46,16 +62,14 @@ module Config
     File.new('/tmp/pjreq3.lock').flock(File::LOCK_UN)
   end
 
-  def self.set_gad # уровень разговорчивости. Если DEBUG|INFO - подключаем логгер к AR
-    if Parser.verbose
-      $logger.level = Parser.verbose
-      if Parser.verbose <= Logger::INFO
-        $arlog = ActiveSupport::Logger.new(STDERR)
-        $arlog.level = Parser.verbose
-        ActiveRecord::Base.logger = $arlog
-      end
-      $logger.debug "Уровень разговорчивости #{$logger.level}"
+  def self.set_gad(lvl) # уровень разговорчивости. Если DEBUG|INFO - подключаем логгер к AR
+    $logger.level = lvl
+    if lvl <= Logger::INFO
+      $arlog = ActiveSupport::Logger.new(STDERR)
+      $arlog.level = lvl
+      ActiveRecord::Base.logger = $arlog
     end
+    $logger.debug "Уровень разговорчивости #{$logger.level}"
   end
 
 end

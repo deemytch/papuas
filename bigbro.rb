@@ -13,7 +13,7 @@ while true do
 		SourceNode.with_active_state.each{|src| src.load_tasks! }
 		
 		puts "задач #{Task.with_ready_state.count}"
-		Task.where(:status => :ready).each{|task| task.doit! }
+		Task.with_ready_state.each{ |t| task.perform_async }
 		Config.unlock!
 	else
 		puts "locked"

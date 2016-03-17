@@ -3,43 +3,36 @@
 end
 
 module Listing
-	def self.list_users
-		accounts = ServerAccount.all.order(:user, :status, :created_at).collect do |acc|
-			[ acc.id, acc.status, acc.name, acc.uri, server_type_letter(acc.kindof),
-				acc.realname,
-				acc.created_at.strftime("%d/%m/%Y %H:%M"),
-				acc.descr
-			]
+	def self.list_servers(kind = nil, name = nil)
+		nodes = ServerAccount.all
+		if ! name.nil? && ! name.empty?
+			nodes = ServerAccount.id_name_uri(name)
 		end
-		$logger.debug "list_accounts #{accounts.to_a.count}"
-		return TTY::Table.new(
-			header: %w[# состояние имя uri тип пользователь добавлен описание],
-			rows: accounts,
-			renderer: 'unicode').render
-	end
-
-	def self.list_servers(kind = %w[TaskNode SourceNode])
-		nodes = ServerAccount.where(kindof: kind).order(:host, :port, :name, :status, :created_at).collect do |node|
-			[	node.id, node.status, node.name, node.uri, 
+		if ! kind.nil?
+			nodes = nodes.where(kindof: kind)
+		end
+		nodes = nodes.order(:host, :port, :name, :status, :created_at).collect do |node|
+			[	server_type_letter(node.kindof), node.id, node.status,
+				node.name, node.uri, 
 				node.created_at.strftime("%d/%m/%Y %H:%M"),
 				node.descr ]
 		end
 		$logger.debug "servers #{nodes.to_a.count}"
 		return TTY::Table.new(
-			header: %w[# состояние имя uri добавлен описание],
+			header: %w[* # состояние имя uri добавлен описание],
 			rows: nodes,
 			renderer: 'unicode').render
 	end
 
-	def self.list_nodes
-		list_servers('TaskNode')
+	def self.list_nodes(name=nil)
+		list_servers('TaskNode', name)
 	end
 
-	def self.list_sources
-		list_servers('SourceNode')
+	def self.list_sources(name=nil)
+		list_servers('SourceNode', name)
 	end
 
-	def self.list_tasks(searchs = nil)		
+	def self.list_tasks(searchs = nil)	
 		if searchs
 			if searchs =~ /^\d+$/ && t = Task.find_by(id: searchs)
 				tasks = [t]

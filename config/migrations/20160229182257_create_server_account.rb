@@ -11,7 +11,7 @@ class CreateServerAccount < ActiveRecord::Migration
       t.string    :key_type
       t.string    :path
       t.string    :realname, index: true
-      t.column    :status, "enum('new', 'dirty', 'active', 'off', 'fail', 'deleted')", :default => 'new', null: false, index: true
+      t.string    :status, :default => 'new', null: false, index: true
       
       t.timestamps null: false
     end

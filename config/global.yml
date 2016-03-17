@@ -16,10 +16,14 @@ mysql:
         database: pjreq_test
         username: pjreq
         password: ababagalamaga
+redis: 
+    db: 0
+    host: 127.0.0.1
 global:
     query_delay: 30 # интервал опроса исходников
     timeout: 30
     tmpdir: /tmp
+
 dbsetup:
     log:  STDERR
 appsetup:

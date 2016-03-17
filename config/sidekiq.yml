@@ -1,0 +1,9 @@
+---
+:concurrency: 2
+:pidfile: tmp/pids/sidekiq.pid
+development:
+  :concurrency: 2
+production:
+  :concurrency: 4
+:queues:
+  - default

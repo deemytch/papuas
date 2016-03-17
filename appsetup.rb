@@ -1,19 +1,18 @@
 #!/usr/bin/env ruby
-=begin
-	1. Проверить наличие базы
-	2. Прочитать параметры командной строки
-	3. Проверить непротиворечивость параметров и базы
-	4. Записать всё в базу с флагом dirty
-=end
+at_exit{
+	exit! $exitcode
+}
+
 options = {}
 if ARGV.empty?
 	puts `#{$0}  --help`
 	exit
 end
+# настройки
 require_relative './config.rb'
 Config.start
-Config.set_gad
+# параметры командной строки
 options = Parser.options
 $logger.debug "команды: #{options.inspect}"
+# выполнить всё веленное
 Executor.add_changes!(options)
-# Executor.perform_async

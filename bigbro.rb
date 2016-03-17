@@ -10,6 +10,6 @@ while true do
 
 	# загружаем задачи, остальное сделает sidekiq
 	SourceNode.with_active_state.each{|src| src.load_tasks! }
-	$logger.info "загружено задач: #{Task.with_ready_state.count}"
+	$logger.info "загружено задач: #{Task.with_processing_state.count}"
 	sleep $cfg[:global][:query_delay]
 end

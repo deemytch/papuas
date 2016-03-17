@@ -13,29 +13,31 @@ class SourceNode < ServerAccount
 =end
 	def on_processing_entry(new_state, event, *args)
 		$logger.debug "SourceNode #{id} начал загрузку задач, статус #{status}"
+		ymlist = []
 		Net::SFTP.start(host, user, sshparams) do |sftp|
-			sftp.dir.foreach(path) do |el|
-				# СДЕЛАТЬ: потом тут можно распараллелить, если понадобится
-				next unless el.name =~ /^doit-(.+)\.yml$/
-				$logger.debug "Загружаю файл описания задачи #{el.longname}\n\t #{path}/#{el.name}"
-				descr = $1
-				yml = YAML.load(sftp.download!("#{path}/#{el.name}"))
-				task = Task.new settings: yml, source_node: self
+			ymlist = sftp.dir.glob(path, '*.yml').collect{|el| "#{path}/#{el.name}" }
+		end
+		$logger.debug "Получен список файлов #{ymlist.inspect}"
+		login do |ssh|
+			ymlist.each do |yml|
+				$logger.debug "Загружаю файл описания задачи #{yml}"
+				task = Task.new settings: YAML.load(ssh.scp.download!(yml)), source_node: self
 				unless task.save
-					$logger.error "Ошибка создания задачи SourceNode##{id}/#{el.name}"
+					$logger.error "Ошибка создания задачи SourceNode##{id}/#{yml}"
 					next
 				end
-				dstname = el.name.gsub /^doit-/,"task-#{task.id}-"
-				Net::SSH.start(host, user, sshparams) do |ssh|
-					ssh.exec! "cd #{path} && mv '#{el.name}' '#{dstname}'"
-				end
-				# копирую файлы задачи ей в папку
-				sftp.download! task.filelist.map{|f| "#{path}/#{f}" }, task.tmpdir
-				# поехали!
+				dstname = yml.gsub /^doit-/,"task-#{task.id}-"
+				ssh.exec! "cd #{path} && mv '#{yml}' '#{dstname}'"
+				task.reload
+				$logger.debug "Копирую файлы задачи №#{task.id} в папку '#{task.tmpdir}'."
+				ds = []
+				task.filelist.each{|f| ds << ssh.scp.download("#{path}/#{f}", task.tmpdir) }
+				ds.each{|down| down.wait }
+				$logger.debug "#{task.id} поехали!"
 				task.power!
 			end
 		end
-	process_done!
+		process_done!
 	rescue SocketError => e
 		$logger.error "Ошибка подключения к хосту ServerAccount##{id}"
 		process_fail!

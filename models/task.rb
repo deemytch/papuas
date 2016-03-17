@@ -18,6 +18,7 @@ class Task < ActiveRecord::Base
 	include Workflow
 	include Sidekiq::Worker
 	workflow_column :status
+	sidekiq_options :retry => false, :backtrace => true
 
 	belongs_to :source_node
 	has_many	:task_reports, :dependent => :destroy
@@ -53,16 +54,18 @@ class Task < ActiveRecord::Base
 		# если все подзадачи имеют такой же статус, меняем статус задачи
 		# если же событие вызвано для этой задачи, то оно передаётся всем подзадачам
 		before_transition do |from, to, triggering_event, *event_args|
-			if triggering_event.meta[:instigator].class == TaskReport &&
-				task_reports.ids.include?(triggering_event.meta[:instigator].id) then
-					self.call "#{triggering_event}!"
-			end
+			$logger.debug "будет переход Task #{id} #{from} -> #{to} :#{triggering_event}, #{event_args.inspect}"
+			# if triggering_event.meta[:instigator].class == TaskReport &&
+			# 	task_reports.ids.include?(triggering_event.meta[:instigator].id) then
+			# 		self.call "#{triggering_event}!"
+			# end
 		end
 
 		after_transition do |from, to, triggering_event, *event_args|
-			if triggering_event.meta[:instigator].id == id
-				task_reports.each{|r| r.call "#{triggering_event}!" }
-			end
+			$logger.debug "был переход Task #{id} #{from} -> #{to} :#{triggering_event}, #{event_args.inspect}"
+			# if triggering_event.meta[:instigator].id == id
+			# 	task_reports.each{|r| r.call "#{triggering_event}!" }
+			# end
 		end
 	end
 
@@ -72,33 +75,37 @@ class Task < ActiveRecord::Base
 				errors.add :settings, "Неправильный файл задания."
 		end
 		settings['servers'].each do |name|
-			unless TaskNode.with_active_state.id_name_uri(name).present?
+			unless TaskNode.with_active_state.id_name_uri(name).any?
 				errors.add :settings, "Сервер задач #{name} не найден или выключен."
 			end
 		end
 	end
 
-	def start_process
-		perform_async(self.id)
+	def on_processing_entry(new_state, event, *args)
+		self.class.perform_async(self.id)
 	end
 
 	def perform(id)
-		# теперь по каждому серверу создаем TaskReport, который будет выполнять скрипт
-		(task = Task.find(id)).settings['servers'].each do |srv, u|
-			noda = Server.with_active_state.find_by(name: srv)
-			user = noda.users.with_active_state.find_by(name: u)
-			tr = TaskReport.create task: task, task_node: noda, user: user
-			if tr.nil?
-				$logger.warn "Задача #{descr} для #{user.name}@#{node.name} не шмагла. Шоэтобыло?"
+		task = Task.find(id)
+		$logger.debug "теперь по каждому серверу создаем TaskReport, который будет выполнять скрипт"
+		(task = Task.find(id)).settings['serverids'].each do |sid|
+			noda = TaskNode.with_active_state.find(sid)
+			trep = TaskReport.new task: task, task_node: noda
+			unless trep.save
+				$logger.warn "Задача #{task.id} для #{user.name}@#{node.name} не шмагла. #{trep.errors.inspect}"
 				next
 			end
-			tr.power!
+			trep.power!
 		end
 	end
+
 	def mk_tmp
-		tmpdir = "#{$cfg[:global][:cachedir]}/task-#{id}-#{ Time.now.strftime "%Y%m%d-%H%M%S" }"
+		self.tmpdir = "#{$cfg[:global][:cachedir]}/task-#{id}-#{ Time.now.strftime "%Y%m%d-%H%M%S" }"
+		unless self.save
+			$logger.error "Ошибка при записи задачи №#{id} в базу. #{self.errors.inspect}"
+			return false
+		end
 		$logger.debug "Task #{id} mk_tmp #{tmpdir}"
-		save
 		FileUtils.mkpath tmpdir
 	end
 	def rm_tmp
@@ -109,11 +116,14 @@ class Task < ActiveRecord::Base
 			self.descr = settings['descr']
 		end
 	end
-	def parse_settings
+	def parse_settings # пишем обработанный список файлов и ID серверов
 		self.script = settings['script']
 		settings['filelist'] ||= []
 		settings['filelist'] << script
 		(settings['filelist'] = settings['filelist'] | settings['files']) if settings.key?('files')
+		self.settings['serverids'] = settings['servers'].collect do |name|
+			TaskNode.with_active_state.id_name_uri(name).first.id
+		end
 	end
 	def filelist
 		settings['filelist']

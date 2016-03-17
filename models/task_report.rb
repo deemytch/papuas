@@ -5,6 +5,7 @@ require 'sidekiq'
 class TaskReport < ActiveRecord::Base
 	include Workflow
 	include Sidekiq::Worker
+	sidekiq_options :retry => false, :backtrace => true
 
 	workflow_column :status
 
@@ -26,21 +27,23 @@ class TaskReport < ActiveRecord::Base
 		state :done
 		state :fail
 	end
-	def on_processing_entry()
-		self.perform_async
+	def on_processing_entry(new_state, event, *args)
+		self.class.perform_async(self.id)
 	end
 	def perform(id)
 		rep = TaskReport.find(id)
-		dstdir = "#{rep.task_node.path}/#{task_node.path}"
-		Net::SSH.login do |ssh|
-			ssh.scp.upload(rep.task.tmpdir, task_node.path, { recursive: true })
-			ssh.exec! %{/bin/bash -lc 'cd #{dstdir} && chmod +x #{scriptname}' && ./#{scriptname} > #{scriptname}.stdout 2>#{scriptname}.stderr ; echo $? > #{scriptname}.retcode }
-			rep.stdout_log = ssh.scp.download %{#{dstdir}/#{scriptname}.stdout }
-			rep.stderr_log = ssh.scp.download %{#{dstdir}/#{scriptname}.stderr }
-			rep.retcode = (ssh.scp.download %{#{dstdir}/#{scriptname}.retcode }).chomp.to_i
+		task = rep.task
+		node = rep.task_node
+		dstdir = "#{node.path}/#{Pathname.new(task.tmpdir).basename}"
+		node.login do |ssh|
+			ssh.scp.upload(task.tmpdir, node.path, { recursive: true })
+			ssh.exec! %{/bin/bash -lc 'cd #{dstdir} && chmod +x #{task.script}' && ./#{task.script} > #{task.script}.stdout 2>#{task.script}.stderr ; echo $? > #{task.script}.retcode }
+			rep.stdout_log = ssh.scp.download! "#{dstdir}/#{task.script}.stdout"
+			rep.stderr_log = ssh.scp.download! "#{dstdir}/#{task.script}.stderr"
+			rep.retcode = (ssh.scp.download! "#{dstdir}/#{task.script}.retcode").chomp.to_i
 			rep.save
 		end
 		rep.allright!
 	end
-	
+
 end

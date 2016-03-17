@@ -5,11 +5,14 @@ require 'net/sftp'
 require 'sidekiq'
 
 =begin
- Представление файла настроек задачи в базе.
- На входе - файл yml
- Проверяет наличие исходных файлов и записывает объекты TaskReport
- по количеству узлов, на которых выполняется данная задача
+	Представление файла настроек задачи в базе.
+	На входе - файл yml
+	Создаёт папку в global.cachedir
+	Копирует туда все исходные файлы
+	Создает TaskReport для каждого целевого сервера, перечисленного в задании
+	Запускает выполнение TaskReport
 =end
+
 class Task < ActiveRecord::Base
 	serialize :settings
 	include Workflow
@@ -20,16 +23,15 @@ class Task < ActiveRecord::Base
 	has_many	:task_reports, :dependent => :destroy
 		has_many :task_nodes, :through => :task_reports
 	
-	validate :yamlsettings # побочные эффекты!
+	validate :yamlsettings
+	after_save :mk_tmp, :on => :create
+	before_save :get_descr, if: -> { self.changes.keys.include? 'settings' }
+	before_save :parse_settings, if: -> { self.changes.keys.include? 'settings' }
 	before_destroy :rm_tmp
 
 	workflow do
-		state :new do
-			event :passed, :transition_to => :ready, meta: { instigator: self }
-			event :failed, :transition_to => :deleted, meta: { instigator: self }
-		end
 		state :ready do
-			event :start_process, :transition_to => :processing, meta: { instigator: self }
+			event :power, :transition_to => :processing, meta: { instigator: self }
 			event :failed, :transition_to => :new, meta: { instigator: self }
 		end
 		state :processing do
@@ -47,7 +49,7 @@ class Task < ActiveRecord::Base
 		state :done
 		state :deleted
 
-		# любая подзадача может отчитаться о переходе в новое состояние
+		# любая подзадача отчитывается о переходе в новое состояние
 		# если все подзадачи имеют такой же статус, меняем статус задачи
 		# если же событие вызвано для этой задачи, то оно передаётся всем подзадачам
 		before_transition do |from, to, triggering_event, *event_args|
@@ -65,64 +67,55 @@ class Task < ActiveRecord::Base
 	end
 
 	def yamlsettings
-		sshdata = { timeout: $cfg[:global][:timeout], :auth_methods=>%w[publickey hostbased] }
-		if settings.nil? || settings.empty?
-			errors.add :settings, "Где настройки задачи, я спрашиваю?" 
-			return
+		if ! settings.key?('servers') || ! settings['servers'].is_a?(Array) ||
+			! settings.key?('script') then
+				errors.add :settings, "Неправильный файл задания."
 		end
-		if ! settings.key?('server') || ! settings.key?('script') || settings['server'].empty?
-			errors.add :settings, 'Не хватает данных для задачи'
-			return
-		end
-		settings['servers'].each do |srv, u|
-			if (noda = Server.with_active_state.find_by(name: srv)).nil? ||
-				(user = noda.users.with_active_state.find_by(name: u)).nil? then
-					errors.add :settings, "Невозможно использовать #{u}@#{srv}"
+		settings['servers'].each do |name|
+			unless TaskNode.with_active_state.id_name_uri(name).present?
+				errors.add :settings, "Сервер задач #{name} не найден или выключен."
 			end
 		end
-		# мало ли какие файлы там надо скопировать, на всякий случай не буду их тащить в базу
-		Net::SCP.start(source_node.host, source_node.users.last.login, sshdata) do |scp|
-			self.data ||= Dir.mktmpdir "task-#{id}-", $cfg[:global][:tmpdir] # может уже всё есть?
-			self.script = scp.download "#{source_node.path}/#{settings['script']}"
-			scriptname = Pathname.new(settings['script']).basename
-			File.new "#{data}/#{scriptname}", 'w' do |f|
-				f.write script
-			end
-			if settings.key?('files')
-				settings['files'].each do |fdata|
-					scp.download "#{source_node.path}/#{fdata}", data
-				end
-			end
-			scp.loop!
-		end
-
-	rescue SocketError => e
-		errors.add :source_node_id, "Ошибка сети #{e}"		
-	rescue Net::SSH::AuthenticationFailed => e
-		errors.add :source_node_id, "Ошибка сети #{e}"
-	rescue Net::SCP::Error => e
-		errors.add :settings, "Обнаружено наличие отсутствия доступа к файлу #{e}. Проверь там чего-нибудь."
 	end
 
 	def start_process
-		self.perform_async
+		perform_async(self.id)
 	end
 
-	def perform
+	def self.perform(id)
 		# теперь по каждому серверу создаем TaskReport, который будет выполнять скрипт
-		settings['servers'].each do |srv, u|
+		(task = Task.find(id)).settings['servers'].each do |srv, u|
 			noda = Server.with_active_state.find_by(name: srv)
 			user = noda.users.with_active_state.find_by(name: u)
-			tr = TaskReport.create task: self, task_node: noda, user: user
+			tr = TaskReport.create task: task, task_node: noda, user: user
 			if tr.nil?
 				$logger.warn "Задача #{descr} для #{user.name}@#{node.name} не шмагла. Шоэтобыло?"
 				next
 			end
+			tr.power!
 		end
 	end
-
-	def rm_tmp
-		FileUtils.rm_r data if data.present?
+	def mk_tmp
+		tmpdir = "#{$cfg[:global][:cachedir]}/task-#{id}-#{ Time.now.strftime "%Y%m%d-%H%M%S" }"
+		$logger.debug "Task #{id} mk_tmp #{tmpdir}"
+		save
+		FileUtils.mkpath tmpdir
 	end
-
+	def rm_tmp
+		FileUtils.rm_r tmpdir if tmpdir.present?
+	end
+	def get_descr
+		if settings.key?('descr') && ! settings['descr'].empty?
+			self.descr = settings['descr']
+		end
+	end
+	def parse_settings
+		self.script = settings['script']
+		settings['filelist'] ||= []
+		settings['filelist'] << script
+		(settings['filelist'] = settings['filelist'] | settings['files']) if settings.key?('files')
+	end
+	def filelist
+		settings['filelist']
+	end
 end

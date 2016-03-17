@@ -20,8 +20,7 @@ module Listing
 		$logger.debug "servers #{nodes.to_a.count}"
 		return TTY::Table.new(
 			header: %w[* # состояние имя uri добавлен описание],
-			rows: nodes,
-			renderer: 'unicode').render
+			rows: nodes).render(:unicode)
 	end
 
 	def self.list_nodes(name=nil)
@@ -53,8 +52,7 @@ module Listing
 		end
 		return TTY::Table.new(
 			header: %w[# состояние исходный назначение имя-скрипта доп.файлы добавлен описание],
-			rows: taskrep,
-			renderer: 'unicode').render
+			rows: taskrep).render(:unicode)
 	end
 
 	def self.server_type_letter(t)

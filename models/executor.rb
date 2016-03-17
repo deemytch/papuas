@@ -39,7 +39,6 @@ module Executor
 						$logger.info "Создан объект #{x.class}: #{x.inspect};"
 					else
 						$logger.error "Не удалось создать объект #{x}\n\t#{x.errors.inspect}"
-						$exitcode += 1
 					end
 				end
 			when :del
@@ -51,7 +50,7 @@ module Executor
 					$logger.error "Не удалось удалить объект #{cmd[:name]}\n\t#{x.errors.inspect}"
 				end
 			when :check
-				@srv = cmd[:name] ? ServerAccount.id_name_uri(cmd[:name]) : ServerAccount.where("status != 'deleted'")
+				@srv = cmd[:name] ? ServerAccount.id_name_uri(cmd[:name]) : ServerAccount.where(status: %w[new processing fail])
 				@srv.each{|node| node.check! }
 			when :logrotate
 				zap!

@@ -4,7 +4,7 @@ class CreateTask < ActiveRecord::Migration
     	t.references :source_node, null: false, index: true
 		t.string   :settings,       null: false
 		t.string   :script,         null: false
-		t.string   :data
+		t.string   :tmpdir
 		t.string   :descr
 		t.datetime :started_at
 		t.datetime :stopped_at

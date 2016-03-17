@@ -22,8 +22,7 @@ redis:
 global:
     query_delay: 30 # интервал опроса исходников
     timeout: 30
-    tmpdir: /tmp
-
+    cachedir: /home/dimytch/work/tmp/pjreq
 dbsetup:
     log:  STDERR
 appsetup:

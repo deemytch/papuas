@@ -1,11 +1,13 @@
 # образец постановки задачи
-# на node1 заходим под юзером masha и так далее
+# перечисляем названия серверов, их ID, или полный URI
 servers:
-  node1name: masha
-  jboss: masha
-  node3: volodymyr
+- node1name
+- jboss
+- node3
+- 4
 # путь к срипту относительно папки, заданной в настройках
 script: jbosdeinst/rmrf.sh
+# остальное необязательно
 files:
 - list
 - unclean.zip

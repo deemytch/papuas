@@ -15,10 +15,6 @@ class TaskReport < ActiveRecord::Base
 	validates :task_node, presence: true
 
 	workflow do
-		state :new do
-			event :passed, :transition_to => :ready, meta: { instigator: self.class }
-			event :failed, :transition_to => :fail, meta: { instigator: self.class }
-		end
 		state :ready do
 			event :power, :transition_to => :processing, meta: { instigator: self.class }
 			event :cancel, :transition_to => :fail, meta: { instigator: self.class }

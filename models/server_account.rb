@@ -34,17 +34,27 @@ class ServerAccount < ActiveRecord::Base
 			event :passed, :transition_to => :active
 			event :failed, :transition_to => :fail
 			event :power_off, :transition_to => :off
+			event :load_tasks, :transition_to => :processing
+		end
+		state :processing do
+			event :passed, :transition_to => :active
+			event :process_done, :transition_to => :active
+			event :process_fail, :transition_to => :fail
 		end
 		state :off do
 			event :passed, :transition_to => :active
 			event :failed, :transition_to => :failed
 		end
-		state :fail
+		state :fail do
+			event :passed, :transition_to => :dirty
+			event :zap, :transition_to => :deleted
+		end
 		state :deleted
 		on_transition do |f,t,e, *ea|
 			$logger.debug "#{kindof}:##{id}.#{name} переход #{f} -> #{t}"
 		end
 	end
+
 	def login(&block)
 		$logger.debug "ServerAccount##{id}.login"
 		data = { timeout: $cfg[:global][:timeout], :auth_methods=>%w[publickey hostbased] }
@@ -52,22 +62,6 @@ class ServerAccount < ActiveRecord::Base
 		data.merge!({ key: key }) if key
 		$logger.debug "\t\t для входа: #{data.inspect};"
 		Net::SSH.start(host, user, data){|ssh| yield(ssh) }
-	#  rescue StandardError => e
-	# 	$logger.warn "Общая ошибка: #{e}"
-	# 	failed!
-	end
-	def check!
-		$logger.debug "ServerAccount##{id}.check!"
-		cmdout = login{|ssh| ssh.exec!(%{/bin/bash -lc 'whoami && cd "#{path}" && pwd ; echo $?'}) }
-		if cmdout.split("\n").last.chomp.to_i != 0
-			failed! meta: { error_msg: cmdout }
-		else
-			passed!
-		end
-		return cmdout
-   rescue Net::SSH::AuthenticationFailed => e
-   	$logger.warn "Ошибка входа #{uri}"
-		failed!
 	end
 
 	def can_login?
@@ -96,6 +90,10 @@ class ServerAccount < ActiveRecord::Base
    	return false
 	end
 	
+	def check!
+		passed! if can_login?
+	end
+
 	def uri_or_name=(s)
 		if s =~ /^(\w+@)?.+:(\d+)?|^\w+@.+/
 			self.uri = s

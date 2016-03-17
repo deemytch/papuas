@@ -1,6 +1,7 @@
 require 'yaml'
 require 'pathname'
 require 'logger'
+require 'fileutils'
 require_relative 'models/logger'
 require_relative 'models/hash'
 require_relative 'models/string'
@@ -12,6 +13,7 @@ module Config
     $logger.level = :warn
     $base ||= File.expand_path(File.dirname(__FILE__))
     $cfg = YAML.load_file("#{$base}/config/global.yml").symkeys
+    FileUtils.mkpath $cfg[:global][:cachedir]
     ENV["BUNDLE_GEMFILE"] ||= "#{$base}/Gemfile"
     require "rubygems"
     require "bundler/setup"

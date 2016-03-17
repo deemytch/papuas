@@ -25,52 +25,22 @@ class TaskReport < ActiveRecord::Base
 		end
 		state :done
 		state :fail
-
 	end
-# временные аттрибуты
-	def sshsession=(sess)
-		@sshsession = sess
+	def on_processing_entry()
+		self.perform_async
 	end
-	def sshsession
-		@sshsession
-	end
-
-	def scpupload=(upl)
-		@scpupload = upl
-	end
-	def scpupload
-		@scpupload
-	end
-
-	def perform
-		started!
-		sshdata = { timeout: $cfg[:global][:timeout], :auth_methods=>%w[publickey hostbased] }
-		scriptdir = Pathname.new(data).basename
-		scriptname = Pathname.new(settings['script']).basename
-		reports = task_reports
-		whenstop = Proc.new {|s| s.busy? }
-		# копируем туда всё
-		reports.each do |t|
-			t.sshsession = Net::SSH.start(t.task_node.host, t.user.login || '', sshdata)
-			t.scpupload = t.sshsession.scp.upload(data, '/tmp', { recursive: true })
+	def perform(id)
+		rep = TaskReport.find(id)
+		dstdir = "#{rep.task_node.path}/#{task_node.path}"
+		Net::SSH.login do |ssh|
+			ssh.scp.upload(rep.task.tmpdir, task_node.path, { recursive: true })
+			ssh.exec! %{/bin/bash -lc 'cd #{dstdir} && chmod +x #{scriptname}' && ./#{scriptname} > #{scriptname}.stdout 2>#{scriptname}.stderr ; echo $? > #{scriptname}.retcode }
+			rep.stdout_log = ssh.scp.download %{#{dstdir}/#{scriptname}.stdout }
+			rep.stderr_log = ssh.scp.download %{#{dstdir}/#{scriptname}.stderr }
+			rep.retcode = (ssh.scp.download %{#{dstdir}/#{scriptname}.retcode }).chomp.to_i
+			rep.save
 		end
-		reports.each{|t| t.scpupload.wait }
-		# теперь запускаем скрипт ловим stdout и stderr
-		reports.each do |t|
-			t.sshsession.exec %{ /bin/bash -lc 'cd /tmp/#{dstdir} && chmod +x #{scriptname}' && ./#{scriptname} > #{scriptname}.stdout 2>#{scriptname}.stderr ; echo $? > #{scriptname}.retcode }
-		end
-		# ждём окончания, забираем всё обратно
-		reports.each{|t| t.sshsession.loop! }
-		reports.each do |t|
-			t.stdout_log = t.sshsession.scp.download %{/tmp/#{dstdir}/#{scriptname}.stdout }
-			t.stderr_log = t.sshsession.scp.download %{/tmp/#{dstdir}/#{scriptname}.stderr }
-			t.retcode = t.sshsession.scp.download %{/tmp/#{dstdir}/#{scriptname}.retcode }
-			t.wait
-			t.save!
-		end
-	rescue StandardError => e
-		$logger.fatal "При выполнении задачи произошла ошибка парламентёра.\n#{e}"
-		script_failed!
+		rep.allright!
 	end
-
+	
 end

@@ -24,9 +24,9 @@ class Task < ActiveRecord::Base
 		has_many :task_nodes, :through => :task_reports
 	
 	validate :yamlsettings
-	after_save :mk_tmp, :on => :create
 	before_save :get_descr, if: -> { self.changes.keys.include? 'settings' }
 	before_save :parse_settings, if: -> { self.changes.keys.include? 'settings' }
+	after_create :mk_tmp
 	before_destroy :rm_tmp
 
 	workflow do
@@ -82,7 +82,7 @@ class Task < ActiveRecord::Base
 		perform_async(self.id)
 	end
 
-	def self.perform(id)
+	def perform(id)
 		# теперь по каждому серверу создаем TaskReport, который будет выполнять скрипт
 		(task = Task.find(id)).settings['servers'].each do |srv, u|
 			noda = Server.with_active_state.find_by(name: srv)

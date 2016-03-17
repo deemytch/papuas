@@ -25,7 +25,7 @@ class SourceNode < ServerAccount
 					$logger.error "Ошибка создания задачи SourceNode##{id}/#{el.name}"
 					next
 				end
-				dstname = el.name.gsub /^doit-/,"task-#{t.id}-"
+				dstname = el.name.gsub /^doit-/,"task-#{task.id}-"
 				Net::SSH.start(host, user, sshparams) do |ssh|
 					ssh.exec! "cd #{path} && mv '#{el.name}' '#{dstname}'"
 				end

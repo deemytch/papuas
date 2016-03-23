@@ -9,12 +9,12 @@ require_relative 'models/string'
 module Config
   def self.start(app = :appsetup)
     $exitcode = 0
-    $logger = Logger.new($stderr)
+    $logger = Logger.new(STDERR)
     $logger.datetime_format = "%d/%m/%y %H:%M"
     $logger.level = :warn
     $base ||= File.expand_path(File.dirname(__FILE__))
     $cfg = YAML.load_file("#{$base}/config/global.yml").symkeys
-    $logger.reopen($cfg[app][:log] == STDERR ? $stderr : File.open($cfg[app][:log], 'a+'))
+    $logger.reopen($cfg[app][:log] == 'STDERR' ? STDERR : File.open($cfg[app][:log], 'a+'))
     FileUtils.mkpath $cfg[:global][:cachedir]
     ENV["BUNDLE_GEMFILE"] ||= "#{$base}/Gemfile"
     require "rubygems"

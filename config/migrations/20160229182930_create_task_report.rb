@@ -4,8 +4,8 @@ class CreateTaskReport < ActiveRecord::Migration
 			t.references :task, null: false, index: true, foreign_key: true
 			t.references :task_node, null: false, index: true
 			t.integer	 :retcode
-			t.string		:stdout_log
-			t.string		:stderr_log
+			t.text		:stdout_log
+			t.text		:stderr_log
 			t.datetime	:started_at
 			t.datetime	:stopped_at
 			t.string		:status, :default => 'new', null: false, index: true

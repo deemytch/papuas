@@ -7,11 +7,15 @@ require_relative 'models/hash'
 require_relative 'models/string'
 
 module Config
+  def self.verbosity
+    @@verbosity ||= %w[debug notice warn error fatal]
+  end
+
   def self.start(app = :appsetup)
     $exitcode = 0
     $logger = Logger.new(STDERR)
     $logger.datetime_format = "%d/%m/%y %H:%M"
-    $logger.level = :warn
+    $logger.level = Logger::INFO
     $base ||= File.expand_path(File.dirname(__FILE__))
     $cfg = YAML.load_file("#{$base}/config/global.yml").symkeys
     $logger.reopen($cfg[app][:log] == 'STDERR' ? STDERR : File.open($cfg[app][:log], 'a+'))
@@ -45,9 +49,9 @@ module Config
     end
 
     $database_env = (ENV['DATABASE_ENV'] || 'development').to_sym
-    begin
+    # begin
       $db = ActiveRecord::Base.establish_connection($cfg[:mysql][$database_env])
-      %w[parser errors task_report task server_account source_node task_node listing executor].each do |src|
+      %w[errors task_report task server_account source_node task_node listing executor].each do |src|
         require_relative "#{$base}/models/#{src}.rb"
       end
       if $database_env == :test
@@ -57,9 +61,9 @@ module Config
         # чистка мусора
         ServerAccount.with_deleted_state.each{|s| s.destroy }
       end
-    rescue ActiveRecord::StatementInvalid => e
-      $logger.fatal "Таблиц нет. Растительности нет. Населена роботами. #{e}"
-    end
+    # rescue ActiveRecord::StatementInvalid => e
+    #   $logger.fatal "Таблиц нет. Растительности нет. Населена роботами. #{e}"
+    # end
   end
 
   def self.setlock?
@@ -76,7 +80,7 @@ module Config
       # $arlog.level = lvl
       ActiveRecord::Base.logger = $logger
     end
-    $logger.debug "Уровень разговорчивости #{$logger.level}"
+    $logger.info "Уровень разговорчивости #{$logger.level}"
   end
 
 end

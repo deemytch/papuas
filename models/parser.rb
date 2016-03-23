@@ -45,7 +45,6 @@ HELPTEXT
 =end
 	@@options = []
 	verbose = Logger::WARN
-	lvls = %w[debug notice warn error fatal]
 	OptionParser.new do |parser|
 		parser.on('-S [id|name|URI]', '--source [id|name|URI]', String,
 			'Работа с источниками задач') do |name|
@@ -127,7 +126,7 @@ HELPTEXT
 		parser.on('-v [level]', '--verbose [(debug|notice|warn|error|fatal)]', String,
 			'Разговорчивый режим, чтобы усилить - добавь ещё "v"') do |level|
 			if level =~ /^(debug|notice|warn|error|fatal)$/
-				verbose = lvls.find_index(level) if lvls.include?(level)
+				verbose = Config.verbosity.find_index(level) if Config.verbosity.include?(level)
 			else
 				verbose -= 1
 				verbose = 0 if verbose < 0

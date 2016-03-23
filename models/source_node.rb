@@ -27,7 +27,9 @@ class SourceNode < ServerAccount
 					next
 				end
 				dstname = yml.gsub /^doit-/,"task-#{task.id}-"
-				ssh.exec! "cd #{path} && mv '#{yml}' '#{dstname}'"
+				$logger.debug "\t Переименовываю файл #{path}/#{yml} -> #{dstname}"
+				o = ssh.exec! "cd #{path} && mv -v '#{yml}' '#{dstname}'"
+				$logger.debug "\t Результат переименования #{o}"
 				task.reload
 				$logger.debug "Копирую файлы задачи №#{task.id} в папку '#{task.tmpdir}'."
 				ds = []
@@ -38,18 +40,18 @@ class SourceNode < ServerAccount
 			end
 		end
 		process_done!
-	rescue SocketError => e
-		$logger.error "Ошибка подключения к хосту ServerAccount##{id}"
-		process_fail!
-	rescue RuntimeError => e
-		$logger.error "Ошибка чтения файла #{e}"
-		process_fail!
-	rescue Net::SFTP::StatusException => e
-		$logger.error "Ошибка копирования файлов #{e}"
-		process_fail!
-	rescue Net::SSH::ConnectionTimeout => e
-		$logger.error "Ошибка подключения #{e}"
-		process_fail!
+	# rescue SocketError => e
+	# 	$logger.error "Ошибка подключения к хосту ServerAccount##{id}; #{e.force_encoding("utf-8")}"
+	# 	process_fail!
+	# rescue RuntimeError => e
+	# 	$logger.error "Ошибка чтения файла #{e.force_encoding("utf-8")}"
+	# 	process_fail!
+	# rescue Net::SFTP::StatusException => e
+	# 	$logger.error "Ошибка копирования файлов #{e.force_encoding("utf-8")}"
+	# 	process_fail!
+	# rescue Net::SSH::ConnectionTimeout => e
+	# 	$logger.error "Ошибка подключения #{e.force_encoding("utf-8")}"
+	# 	process_fail!
 	end
 end
 

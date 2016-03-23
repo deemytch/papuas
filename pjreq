@@ -11,6 +11,7 @@ end
 # настройки
 require_relative './config.rb'
 Config.start
+require_relative 'models/parser.rb'
 # параметры командной строки
 options = Parser.options
 $logger.debug "команды: #{options.inspect}"

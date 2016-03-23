@@ -29,4 +29,5 @@ appsetup:
     log:  STDERR
     publish: nodes.listing.yml
 bigbro:
-    log: log/bigbro.log
+    # log: log/bigbro.log
+    log: STDERR

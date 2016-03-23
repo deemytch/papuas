@@ -70,6 +70,7 @@ class Task < ActiveRecord::Base
 	end
 
 	def yamlsettings
+		$logger.debug "Task. Проверяю проверки. #{settings.inspect}"
 		if ! settings.key?('servers') || ! settings['servers'].is_a?(Array) ||
 			! settings.key?('script') then
 				errors.add :settings, "Неправильный файл задания."
@@ -79,13 +80,20 @@ class Task < ActiveRecord::Base
 				errors.add :settings, "Сервер задач #{name} не найден или выключен."
 			end
 		end
+		source_node.login do |ssh|
+			# проверить наличие скрипта и доп. файлов на SourceNode
+			([settings['script']] | (settings['files'] || [])).each do |f|
+				a = ssh.exec!("[ -f #{source_node.path}/#{settings['script']} ] ; echo $?").chomp.to_i
+				errors.add :settings, "Файл #{f} не найден на #{source_node.name}" unless a == 0
+			end
+		end
 	end
 
 	def on_processing_entry(new_state, event, *args)
-		self.class.perform_async(self.id)
+		self.class.do(self.id)
 	end
 
-	def perform(id)
+	def self.do(id)
 		task = Task.find(id)
 		$logger.debug "теперь по каждому серверу создаем TaskReport, который будет выполнять скрипт"
 		(task = Task.find(id)).settings['serverids'].each do |sid|

@@ -31,7 +31,7 @@ module Listing
 		list_servers('SourceNode', name)
 	end
 
-	def self.list_tasks(searchs = nil)	
+	def self.list_tasks(searchs = nil)
 		if searchs
 			if searchs =~ /^\d+$/ && t = Task.find_by(id: searchs)
 				tasks = [t]
@@ -40,19 +40,19 @@ module Listing
 					order(:status, :created_at, 'server_accounts.host', 'server_accounts.port')
 			end
 		else
-			tasks = Task.all
+			tasks = Task.all.order(:status)
 		end
 		return 'Ничего не найдено' if tasks.nil? || tasks.empty?
 		taskrep = tasks.collect do |task|
-			[  task.id, task.status, task.source_node.uri,
-				task.task_nodes.collect{|n| n.uri}.join("\n"),
-				task.script, task.settings[:files].count,
-				task.created_at, task.descr
+			[  task.status[0].upcase, task.id, task.source_node.name,
+				task.task_nodes.collect{|n| n.name}.join("\n"),
+				task.script, task.settings['filelist'].count,
+				task.created_at.strftime("%d/%m %H:%M"), task.descr
 			]
 		end
 		return TTY::Table.new(
-			header: %w[# состояние исходный назначение имя-скрипта доп.файлы добавлен описание],
-			rows: taskrep).render(:unicode)
+			header: %w[* # исходный назначение имя-скрипта доп.файлы добавлен описание],
+			rows: taskrep).render(:unicode) + "\nвсего #{tasks.count}"
 	end
 
 	def self.server_type_letter(t)

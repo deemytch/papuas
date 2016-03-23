@@ -14,7 +14,7 @@ class SourceNode < ServerAccount
 	def on_processing_entry(new_state, event, *args)
 		$logger.debug "SourceNode #{id} начал загрузку задач, статус #{status}"
 		ymlist = []
-		Net::SFTP.start(host, user, sshparams) do |sftp|
+		sftplogin do |sftp|
 			ymlist = sftp.dir.glob(path, '*.yml').collect{|el| "#{path}/#{el.name}" }
 		end
 		$logger.debug "Получен список файлов #{ymlist.inspect}"

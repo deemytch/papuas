@@ -28,14 +28,15 @@ class TaskReport < ActiveRecord::Base
 		state :fail
 	end
 	def on_processing_entry(new_state, event, *args)
-		self.class.perform_async(self.id)
+		self.class.do(self.id)
 	end
-	def perform(id)
+	def self.do(id)
 		rep = TaskReport.find(id)
 		task = rep.task
 		node = rep.task_node
 		dstdir = "#{node.path}/#{Pathname.new(task.tmpdir).basename}"
 		node.login do |ssh|
+			$logger.debug "TaskReport #{id} произвожу работу. файлы: #{`ls -l #{task.tmpdir}`}"
 			ssh.scp.upload(task.tmpdir, node.path, { recursive: true })
 			ssh.exec! %{/bin/bash -lc 'cd #{dstdir} && chmod +x #{task.script}' && ./#{task.script} > #{task.script}.stdout 2>#{task.script}.stderr ; echo $? > #{task.script}.retcode }
 			rep.stdout_log = ssh.scp.download! "#{dstdir}/#{task.script}.stdout"
@@ -45,5 +46,4 @@ class TaskReport < ActiveRecord::Base
 		end
 		rep.allright!
 	end
-
 end

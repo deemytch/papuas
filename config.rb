@@ -9,10 +9,12 @@ require_relative 'models/string'
 module Config
   def self.start(app = :appsetup)
     $exitcode = 0
-    $logger = Logger.new(STDERR)
+    $logger = Logger.new($stderr)
+    $logger.datetime_format = "%d/%m/%y %H:%M"
     $logger.level = :warn
     $base ||= File.expand_path(File.dirname(__FILE__))
     $cfg = YAML.load_file("#{$base}/config/global.yml").symkeys
+    $logger.reopen($cfg[app][:log] == STDERR ? $stderr : File.open($cfg[app][:log], 'a+'))
     FileUtils.mkpath $cfg[:global][:cachedir]
     ENV["BUNDLE_GEMFILE"] ||= "#{$base}/Gemfile"
     require "rubygems"
@@ -59,6 +61,7 @@ module Config
       $logger.fatal "Таблиц нет. Растительности нет. Населена роботами. #{e}"
     end
   end
+
   def self.setlock?
     File.new("/tmp/pjreq3.lock",'w').flock(File::LOCK_NB | File::LOCK_EX)
   end
@@ -69,9 +72,9 @@ module Config
   def self.set_gad(lvl) # уровень разговорчивости. Если DEBUG|INFO - подключаем логгер к AR
     $logger.level = lvl
     if lvl <= Logger::INFO
-      $arlog = ActiveSupport::Logger.new(STDERR)
-      $arlog.level = lvl
-      ActiveRecord::Base.logger = $arlog
+      # $arlog = ActiveSupport::Logger.new($cfg[app][:log] == STDERR ? STDERR : File.open($cfg[app][:log], 'a+'))
+      # $arlog.level = lvl
+      ActiveRecord::Base.logger = $logger
     end
     $logger.debug "Уровень разговорчивости #{$logger.level}"
   end

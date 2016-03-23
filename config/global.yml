@@ -29,4 +29,4 @@ appsetup:
     log:  STDERR
     publish: nodes.listing.yml
 bigbro:
-    log: log/bigbro-#{ Time.now.strftime "%s" }
+    log: log/bigbro.log

@@ -57,19 +57,12 @@ class ServerAccount < ActiveRecord::Base
 
 	def login(&block)
 		$logger.debug "ServerAccount##{id}.login"
-		data = { timeout: $cfg[:global][:timeout], :auth_methods=>%w[publickey hostbased] }
-		data.merge!({ port: port }) if port
-		data.merge!({ key: key }) if key
-		$logger.debug "\t\t для входа: #{data.inspect};"
-		Net::SSH.start(host, user, data){|ssh| yield(ssh) }
+		Net::SSH.start(host, user, sshparams){|ssh| yield(ssh) }
 	end
 
 	def can_login?
 		$logger.debug "ServerAccount.can_login? #{user}@#{host}"
-		data = { timeout: $cfg[:global][:timeout], :auth_methods=>%w[publickey hostbased] }
-		data.merge!({ port: port }) if port
-#		data.merge!({ key: key }) if key
-		cmdout = Net::SSH.start(host, user, data) do |ssh|
+		cmdout = Net::SSH.start(host, user, sshparams) do |ssh|
 			ssh.exec! %{/bin/bash -lc 'whoami && cd "#{path}" && pwd ; echo $?'}
 		end
 		$logger.debug cmdout
@@ -90,6 +83,11 @@ class ServerAccount < ActiveRecord::Base
    	return false
 	end
 	
+	def sftplogin(&block)
+		$logger.debug "SFTP вход на ServerAccount #{name}"
+		Net::SFTP.start(host, user, sshparams){|sftp| yield(sftp) }
+	end
+
 	def check!
 		passed! if can_login?
 	end

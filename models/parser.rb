@@ -70,8 +70,8 @@ HELPTEXT
 			exit
 		end
 		parser.on('-R name|uri|id', '--rm name|uri|id', String,
-			'удаление записи по имени или URI') do |name|
-			@@options << { t: ServerAccount, :action => :del, name: name }
+			'удаление записи по имени, ID или URI; %ID для номера задачи') do |name|
+			@@options << { t: ((name =~ /^%/) ? Task : ServerAccount), :action => :del, name: name }
 		end
 		parser.on('-C [name|uri|id]', '--check [name|uri|id]', String,
 			'зайти на сервер для проверки настроек') do |name|
@@ -132,7 +132,6 @@ HELPTEXT
 				verbose -= 1
 				verbose = 0 if verbose < 0
 			end
-			puts "уровень велеречивости #{verbose}"
 			Config.set_gad verbose
 		end
 		parser.on('-z', '--zap', 'Удалить все записи, со статусом "удалено"') do

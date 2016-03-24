@@ -42,7 +42,7 @@ class ServerAccount < ActiveRecord::Base
 			event :process_fail, :transition_to => :fail
 		end
 		state :off do
-			event :passed, :transition_to => :active
+			event :passed, :transition_to => :dirty
 			event :failed, :transition_to => :failed
 		end
 		state :fail do

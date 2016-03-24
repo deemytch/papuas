@@ -84,6 +84,9 @@ HELPTEXT
 		parser.on('', '--off', 'Временно исключить хост, заданный в директиве -N или -T') do
 			@@options.last[:action] = :off
 		end
+		parser.on('', '--on', 'Временно исключить хост, заданный в директиве -N или -T') do
+			@@options.last[:action] = :on
+		end
 		parser.on('-u uri', '--uri uri', String, 'URI') do |uri|
 			@@options.last[:params] ||= {}
 			@@options.last[:params][:uri] = uri

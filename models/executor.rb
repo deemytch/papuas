@@ -16,6 +16,14 @@ module Executor
 				else
 					$logger.error "Не удалось найти объект #{cmd[:name]}"
 				end
+			when :on # name:[id,uri,name]
+				x = cmd[:t].id_name_uri(cmd[:name]).first
+				if x.present?
+					x.check!
+					$logger.info "Включён объект #{x.class}: #{x.inspect};"
+				else
+					$logger.error "Не удалось найти объект #{cmd[:name]}"
+				end
 			when :add # и :mod
 				x = cmd[:t].id_name(cmd[:name]).first
 				if x.present?

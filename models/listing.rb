@@ -20,7 +20,7 @@ module Listing
 		$logger.debug "servers #{nodes.to_a.count}"
 		return TTY::Table.new(
 			header: %w[* # состояние имя uri добавлен описание],
-			rows: nodes).render(:unicode)
+			rows: nodes).render(:unicode, multiline: true)
 	end
 
 	def self.list_nodes(name=nil)
@@ -32,27 +32,43 @@ module Listing
 	end
 
 	def self.list_tasks(searchs = nil)
-		if searchs
+		if searchs # подробный список
 			if searchs =~ /^\d+$/ && t = Task.find_by(id: searchs)
 				tasks = [t]
 			elsif (accounts = ServerAccount.host_or_uri(searchs)).any?
 				tasks = Task.where(source_node_id: accounts.ids).joins(:source_node).
 					order(:status, :created_at, 'server_accounts.host', 'server_accounts.port')
 			end
-		else
+			ou = ''
+			tasks.each do |t|
+				rows =
+					[["#{t.descr}"],
+					["задача id: #{t.id}; source: #{t.source_node.id}, #{t.source_node.name}, #{t.source_node.uri}"],
+					["назначение: #{t.task_nodes.pluck(:name).join(', ')};"],
+					["скрипт: #{t.settings['script']}, доп. файлы: #{t.settings['filelist'].join(', ')};"]]
+				ou += TTY::Table.new(rows).render(:unicode, multiline: true) + "\n" +
+				t.task_reports.collect do |trep|
+					"узел: ##{trep.task_node.id}, #{trep.task_node.name}, #{trep.task_node.uri}\n" +
+					"STDOUT:\n#{trep.stdout_log}\n" +
+					"STDERR:\n#{trep.stderr_log}\n"
+				end.join("───────────────────────────────\n") + "\n"
+			end
+			return ou
+		else # краткий список задач
 			tasks = Task.all.order(:status)
-		end
-		return 'Ничего не найдено' if tasks.nil? || tasks.empty?
-		taskrep = tasks.collect do |task|
+			taskrep = tasks.collect do |task|
 			[  task.status[0].upcase, task.id, task.source_node.name,
 				task.task_nodes.collect{|n| n.name}.join("\n"),
 				task.script, task.settings['filelist'].count,
 				task.created_at.strftime("%d/%m %H:%M"), task.descr
 			]
+			end
+			return TTY::Table.new(
+				header: %w[* # исходный назначение имя-скрипта доп.файлы добавлен описание],
+				rows: taskrep).render(:unicode, multiline: true) +
+				"\nвсего #{tasks.count}"
 		end
-		return TTY::Table.new(
-			header: %w[* # исходный назначение имя-скрипта доп.файлы добавлен описание],
-			rows: taskrep).render(:unicode) + "\nвсего #{tasks.count}"
+		return 'Ничего не найдено' if tasks.nil? || tasks.empty?
 	end
 
 	def self.server_type_letter(t)

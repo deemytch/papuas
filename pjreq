@@ -1,7 +1,5 @@
 #!/usr/bin/env ruby
-at_exit{
-	exit! $exitcode
-}
+at_exit{ exit $exitcode }
 
 options = {}
 if ARGV.empty?

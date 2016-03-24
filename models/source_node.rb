@@ -12,6 +12,7 @@ class SourceNode < ServerAccount
 Если задача создана успешно, то переименовываем на исходном хосте их в taskloaded*
 =end
 	def on_processing_entry(new_state, event, *args)
+		
 		$logger.debug "SourceNode #{id} начал загрузку задач, статус #{status}"
 		ymlist = []
 		sftplogin do |sftp|

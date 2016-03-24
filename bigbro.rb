@@ -41,7 +41,7 @@ def handjob(tm = false)
 			"узлов #{TaskNode.with_active_state.count}"
 
 	# загружаем задачи, остальное сделает sidekiq или не sidekiq
-	SourceNode.with_active_state.each{|src| src.load_tasks!(tm) }
+	SourceNode.with_active_state.each{|src| src.load_tasks!(meta: { taskmanager: tm }) }
 	$logger.info "загружено задач: #{Task.with_processing_state.count}"
 end
 

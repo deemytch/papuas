@@ -34,7 +34,7 @@ class ServerAccount < ActiveRecord::Base
 			event :passed, :transition_to => :active
 			event :failed, :transition_to => :fail
 			event :power_off, :transition_to => :off
-			event :load_tasks, :transition_to => :processing
+			event :load_tasks, :transition_to => :processing, meta: { taskmanager: false }
 		end
 		state :processing do
 			event :passed, :transition_to => :active
@@ -51,7 +51,7 @@ class ServerAccount < ActiveRecord::Base
 		end
 		state :deleted
 		on_transition do |f,t,e, *ea|
-			$logger.debug "#{kindof}:##{id}.#{name} переход #{f} -> #{t}"
+			$logger.debug "#{kindof}:##{id}.#{name} переход #{f} -> #{t} (#{ea.inspect})"
 		end
 	end
 

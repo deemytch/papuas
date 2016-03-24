@@ -12,7 +12,7 @@ class SourceNode < ServerAccount
 Если задача создана успешно, то переименовываем на исходном хосте их в taskloaded*
 =end
 	def on_processing_entry(new_state, event, *args)
-		
+
 		$logger.debug "SourceNode #{id} начал загрузку задач, статус #{status}"
 		ymlist = []
 		sftplogin do |sftp|
@@ -24,7 +24,7 @@ class SourceNode < ServerAccount
 				$logger.debug "Загружаю файл описания задачи #{yml}"
 				task = Task.new settings: YAML.load(ssh.scp.download!(yml)), source_node: self
 				unless task.save
-					$logger.error "Ошибка создания задачи SourceNode##{id}/#{yml}"
+					$logger.error "Ошибка создания задачи. SourceNode##{name}/#{yml}/#{task.errors.inspect}"
 					next
 				end
 				dstname = yml.gsub /^doit-/,"task-#{task.id}-"

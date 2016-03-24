@@ -1,17 +1,21 @@
 #!/usr/bin/env ruby
 at_exit{ exit $exitcode }
 
-options = {}
-if ARGV.empty?
-	puts `#{$0}  --help`
-	exit
+begin
+	options = {}
+	if ARGV.empty?
+		puts `#{$0}  --help`
+		exit
+	end
+	# настройки
+	require_relative './config.rb'
+	Config.start
+	require_relative 'models/parser.rb'
+	# параметры командной строки
+	options = Parser.options
+	$logger.debug "команды: #{options.inspect}"
+	# выполнить всё веленное
+	Executor.add_changes!(options)
+rescue ActiveRecord::RecordNotFound => e
+	$logger.fatal "Запись не найдена в базе. #{e}"
 end
-# настройки
-require_relative './config.rb'
-Config.start
-require_relative 'models/parser.rb'
-# параметры командной строки
-options = Parser.options
-$logger.debug "команды: #{options.inspect}"
-# выполнить всё веленное
-Executor.add_changes!(options)

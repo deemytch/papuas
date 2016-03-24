@@ -32,13 +32,14 @@ module Listing
 	end
 
 	def self.list_tasks(searchs = nil)
-		if searchs # подробный список
+		if searchs # подробный состояние задачи
 			if searchs =~ /^\d+$/ && t = Task.find_by(id: searchs)
 				tasks = [t]
 			elsif (accounts = ServerAccount.host_or_uri(searchs)).any?
 				tasks = Task.where(source_node_id: accounts.ids).joins(:source_node).
 					order(:status, :created_at, 'server_accounts.host', 'server_accounts.port')
 			end
+			return 'Ничего не найдено' if tasks.nil? || tasks.empty?
 			ou = ''
 			tasks.each do |t|
 				rows =
@@ -56,6 +57,7 @@ module Listing
 			return ou
 		else # краткий список задач
 			tasks = Task.all.order(:status)
+			return 'Ничего не найдено' if tasks.nil? || tasks.empty?
 			taskrep = tasks.collect do |task|
 			[  task.status[0].upcase, task.id, task.source_node.name,
 				task.task_nodes.collect{|n| n.name}.join("\n"),
@@ -68,7 +70,6 @@ module Listing
 				rows: taskrep).render(:unicode, multiline: true) +
 				"\nвсего #{tasks.count}"
 		end
-		return 'Ничего не найдено' if tasks.nil? || tasks.empty?
 	end
 
 	def self.server_type_letter(t)

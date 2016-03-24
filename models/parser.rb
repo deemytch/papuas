@@ -81,7 +81,7 @@ HELPTEXT
 				puts Listing.list_tasks(i)
 				exit
 		end
-		parser.on('', '-off', 'Временно исключить хост, заданный в директиве -N или -T') do
+		parser.on('', '--off', 'Временно исключить хост, заданный в директиве -N или -T') do
 			@@options.last[:action] = :off
 		end
 		parser.on('-u uri', '--uri uri', String, 'URI') do |uri|

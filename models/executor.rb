@@ -14,7 +14,7 @@ module Executor
 					x.power_off!
 					$logger.info "Выключен объект #{x.class}: #{x.inspect};"
 				else
-					$logger.error "Не удалось найти объект #{cmd[:name]}\n\t#{e}"
+					$logger.error "Не удалось найти объект #{cmd[:name]}"
 				end
 			when :add # и :mod
 				x = cmd[:t].id_name(cmd[:name]).first
@@ -42,7 +42,6 @@ module Executor
 					end
 				end
 			when :del
-				puts "удаление"
 				cmd[:t] == ServerAccount ? 
 					x = cmd[:t].id_name(cmd[:name]).first :
 					x = cmd[:t].find(cmd[:name][1..-1])

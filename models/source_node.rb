@@ -12,11 +12,10 @@ class SourceNode < ServerAccount
 Если задача создана успешно, то переименовываем на исходном хосте их в taskloaded*
 =end
 	def on_processing_entry(new_state, event, *args)
-
-		$logger.debug "SourceNode #{id} начал загрузку задач, статус #{status}"
+		$logger.debug "SourceNode #{id} начал загрузку задач, статус #{status}, (#{args.inspect})"
 		ymlist = []
 		sftplogin do |sftp|
-			ymlist = sftp.dir.glob(path, '*.yml').collect{|el| "#{path}/#{el.name}" }
+			ymlist = sftp.dir.glob(path, 'doit*.yml').collect{|el| "#{path}/#{el.name}".force_encoding('utf-8') }
 		end
 		$logger.debug "Получен список файлов #{ymlist.inspect}"
 		login do |ssh|
@@ -27,10 +26,11 @@ class SourceNode < ServerAccount
 					$logger.error "Ошибка создания задачи. SourceNode##{name}/#{yml}/#{task.errors.inspect}"
 					next
 				end
-				dstname = yml.gsub /^doit-/,"task-#{task.id}-"
-				$logger.debug "\t Переименовываю файл #{path}/#{yml} -> #{dstname}"
-				o = ssh.exec! "cd #{path} && mv -v '#{yml}' '#{dstname}'"
-				$logger.debug "\t Результат переименования #{o}"
+				ymlfname = Pathname.new(yml).basename.to_s
+				dstname = ymlfname.gsub(/^doit-/, "task-#{task.id}-")
+				$logger.debug "\t Переименовываю файл #{path}/#{ymlfname} -> #{dstname}"
+				o = ssh.exec! "cd #{path} && mv -v '#{ymlfname}' '#{dstname}'"
+				$logger.debug "\t Результат переименования #{o.force_encoding('utf-8')}"
 				task.reload
 				$logger.debug "Копирую файлы задачи №#{task.id} в папку '#{task.tmpdir}'."
 				ds = []

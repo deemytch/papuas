@@ -68,7 +68,6 @@ module Executor
 				repfn = "#{$cfg[:global][:cachedir]}/#{$cfg[:appsetup][:publish]}"
 				$logger.debug "Записываю отчёт в #{repfn}"
 				File.open(repfn, 'w'){|f| f.write Listing.list_nodes	}
-				chan = []
 				nodes = SourceNode.where(status: [:active, :dirty])
 				$logger.debug "Начинаю копировать на источники: [#{nodes.pluck(:name).join(', ')}]"
 				nodes.each do |node|

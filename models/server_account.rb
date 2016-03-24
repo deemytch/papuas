@@ -37,7 +37,7 @@ class ServerAccount < ActiveRecord::Base
 			event :load_tasks, :transition_to => :processing, meta: { taskmanager: false }
 		end
 		state :processing do
-			event :passed, :transition_to => :active
+			event :passed, :transition_to => :dirty
 			event :process_done, :transition_to => :active
 			event :process_fail, :transition_to => :fail
 		end
@@ -50,11 +50,11 @@ class ServerAccount < ActiveRecord::Base
 			event :zap, :transition_to => :deleted
 		end
 		state :deleted
-		on_transition do |f,t,e, *ea|
-			$logger.debug "#{kindof}:##{id}.#{name} переход #{f} -> #{t} (#{ea.inspect})"
+		on_transition do |from, to, te, *ea|
+			meta = ServerAccount.workflow_spec.states[from].events[te].first.meta
+			$logger.debug "#{kindof}:##{id}.#{name} переход #{from} -> #{to} (#{ea.inspect}), meta: #{meta.inspect}"
 		end
 	end
-
 	def login(&block)
 		$logger.debug "ServerAccount##{id}.login"
 		Net::SSH.start(host, user, sshparams){|ssh| yield(ssh) }

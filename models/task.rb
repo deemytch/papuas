@@ -54,16 +54,20 @@ class Task < ActiveRecord::Base
 		# если все подзадачи имеют такой же статус, меняем статус задачи
 		# если же событие вызвано для этой задачи, то оно передаётся всем подзадачам
 		before_transition do |from, to, triggering_event, *event_args|
-			$logger.debug "будет переход Task #{id} #{from} -> #{to} :#{triggering_event}, #{event_args.inspect}"
-			# if triggering_event.meta[:instigator].class == TaskReport &&
-			# 	task_reports.ids.include?(triggering_event.meta[:instigator].id) then
+			meta = Task.workflow_spec.states[from].events[triggering_event].first.meta
+			$logger.debug "будет переход Task #{id} #{from} -> #{to} :#{triggering_event}, #{event_args.inspect}, meta: #{meta.inspect}"
+			# meta = Task.workflow_spec.states[from].events[triggering_event].meta
+			# if meta[:instigator].class == TaskReport &&
+			# 	task_reports.ids.include?(meta[:instigator].id) then
 			# 		self.call "#{triggering_event}!"
 			# end
 		end
 
 		after_transition do |from, to, triggering_event, *event_args|
-			$logger.debug "был переход Task #{id} #{from} -> #{to} :#{triggering_event}, #{event_args.inspect}"
-			# if triggering_event.meta[:instigator].id == id
+			meta = Task.workflow_spec.states[from].events[triggering_event].first.meta
+			$logger.debug "был переход Task #{id} #{from} -> #{to} :#{triggering_event}, #{event_args.inspect}, meta: #{meta.inspect}"
+			# meta = Task.workflow_spec.events[triggering_event].meta
+			# if meta[:instigator].id == id
 			# 	task_reports.each{|r| r.call "#{triggering_event}!" }
 			# end
 		end

@@ -17,12 +17,12 @@ class TaskReport < ActiveRecord::Base
 
 	workflow do
 		state :ready do
-			event :power, :transition_to => :processing, meta: { instigator: self.class }
-			event :cancel, :transition_to => :fail, meta: { instigator: self.class }
+			event :power, :transition_to => :processing
+			event :cancel, :transition_to => :fail
 		end
 		state :processing do
-			event :allright, :transition_to => :done, meta: { instigator: self.class }
-			event :failed, :transition_to => :fail, meta: { instigator: self.class }
+			event :allright, :transition_to => :done
+			event :failed, :transition_to => :fail
 		end
 		state :done
 		state :fail

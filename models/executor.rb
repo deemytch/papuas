@@ -65,16 +65,17 @@ module Executor
 			when :logrotate
 				zap!
 			when :publish
-				repfn = "#{$cfg[:global][:tmpdir]}/#{$cfg[:appsetup][:publish]}"
+				repfn = "#{$cfg[:global][:cachedir]}/#{$cfg[:appsetup][:publish]}"
 				$logger.debug "Записываю отчёт в #{repfn}"
-				File.open(repfn, 'w'){|f| f.write Listing.list_users	}
+				File.open(repfn, 'w'){|f| f.write Listing.list_nodes	}
 				chan = []
-				$logger.debug "Начинаю копировать на источники"
-				SourceNode.with_active_state.each do |node|
+				nodes = SourceNode.where(status: [:active, :dirty])
+				$logger.debug "Начинаю копировать на источники: [#{nodes.pluck(:name).join(', ')}]"
+				nodes.each do |node|
 					$logger.debug "узел #{node.name}"
 					node.login do |ssh|
-						$logger.debug "Копирую файл справочника на #{node.name}"
-						out = ssh.scp.upload!(repfn, node.uri)
+						$logger.debug "Копирую файл справочника на #{node.name}/#{node.path}"
+						out = ssh.scp.upload!(repfn, node.path)
 						$logger.debug out
 					end
 				end

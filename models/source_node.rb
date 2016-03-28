@@ -29,8 +29,10 @@ class SourceNode < ServerAccount
 				ymlfname = Pathname.new(yml).basename.to_s
 				dstname = ymlfname.gsub(/^doit-/, "task-#{task.id}-")
 				$logger.debug "\t Переименовываю файл #{path}/#{ymlfname} -> #{dstname}"
-				o = ssh.exec! "cd #{path} && mv -v '#{ymlfname}' '#{dstname}'"
-				$logger.debug "\t Результат переименования #{o.force_encoding('utf-8')}"
+        ymlfname.force_encoding('binary')
+        dstname.force_encoding('binary')
+				o = ssh.exec!("cd #{path} && mv -v '#{ymlfname}' '#{dstname}'").force_encoding('utf-8')
+				$logger.debug "\t Результат переименования #{o}"
 				task.reload
 				$logger.debug "Копирую файлы задачи №#{task.id} в папку '#{task.tmpdir}'."
 				ds = []

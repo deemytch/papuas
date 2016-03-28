@@ -118,7 +118,12 @@ class Task < ActiveRecord::Base
 			return false
 		end
 		$logger.debug "Task #{id} mk_tmp #{tmpdir}"
-		FileUtils.mkpath tmpdir
+		begin
+			FileUtils.mkpath tmpdir
+		rescue Errno::EACCES => e
+			logger.fatal "Не могу создать папку #{tmpdir}. #{e}"
+			return false
+		end
 	end
 	def rm_tmp
 		FileUtils.rm_r tmpdir if tmpdir.present?

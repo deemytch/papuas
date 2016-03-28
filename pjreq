@@ -5,6 +5,7 @@ begin
 	options = {}
 	if ARGV.empty?
 		puts `#{$0}  --help`
+		$exitcode = 1
 		exit
 	end
 	# настройки

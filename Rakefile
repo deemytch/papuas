@@ -46,11 +46,10 @@ namespace :db do
         CREATE USER IF NOT EXISTS #{config[:username]} IDENTIFIED BY '#{config[:password]}';
         FLUSH PRIVILEGES;
       SQL_USER
-      sql_db = "CREATE DATABASE IF NOT EXISTS #{config[:database]};"
+      sql_db = "CREATE DATABASE IF NOT EXISTS #{config[:database]} CHARACTER SET utf8 COLLATE utf8_general_ci;"
       sql_grant = <<~SQLGRANT
           GRANT ALL PRIVILEGES ON #{config[:database]}.* 
-            TO '#{config[:username]}'
-            IDENTIFIED BY '#{config[:password]}';
+            TO '#{config[:username]}';
       SQLGRANT
 
       `mysql -u root -Nse "#{sql_user}"`

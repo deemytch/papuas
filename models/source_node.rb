@@ -9,7 +9,7 @@ class SourceNode < ServerAccount
 =begin
 Ищем на host/path все файлы с именем doit-*yml
 Грузим по очереди в Task
-Если задача создана успешно, то переименовываем на исходном хосте их в taskloaded*
+Если задача создана успешно, то переименовываем на исходном хосте их в task-:id*
 =end
 	def on_processing_entry(new_state, event, *args)
 		$logger.debug "SourceNode #{id} начал загрузку задач, статус #{status}, (#{args.inspect})"

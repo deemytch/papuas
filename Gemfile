@@ -15,3 +15,4 @@ gem 'sshkit'
 gem 'net-sftp'
 
 gem 'rspec'
+gem 'rake'

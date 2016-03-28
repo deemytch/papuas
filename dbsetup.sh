@@ -1,4 +1,4 @@
 #!/bin/sh
-rake db:drop 
+bundle exec rake db:drop
 sleep 1
-rake db:create db:migrate
+bundle exec rake db:create db:migrate

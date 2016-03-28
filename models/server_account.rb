@@ -72,15 +72,15 @@ class ServerAccount < ActiveRecord::Base
 			return false
 		end
 		return true
-	# rescue SocketError => e
-	# 	errors.add :host, "Не найден хост, #{e}"
-	# 	return false
-	# rescue Errno::ECONNREFUSED => e
-	# 	errors.add :port, "Ошибка подключения. Порт правильный? #{e}"
-	# 	return false
-   # rescue Net::SSH::AuthenticationFailed => e
-   # 	errors.add :user, "Ошибка входа, #{e}"
-   # 	return false
+		rescue SocketError => e
+			errors.add :host, "Не найден хост, #{e}"
+			return false
+		rescue Errno::ECONNREFUSED => e
+			errors.add :port, "Ошибка подключения. Порт правильный? #{e}"
+			return false
+  	rescue Net::SSH::AuthenticationFailed => e
+   		errors.add :user, "Ошибка входа, #{e}"
+   		return false
 	end
 	
 	def sftplogin(&block)

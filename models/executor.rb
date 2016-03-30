@@ -64,6 +64,15 @@ module Executor
 				@srv.each{|node| node.check! }
 			when :logrotate
 				zap!
+			when :tasklist
+				if cmd.key?(:remote)
+					tasks = cmd[:remote].nil? ? Task.all : Task.id_name_uri(cmd[:remote])
+					$logger.debug "найдено задач #{tasks.count}; завершённых #{tasks.with_done_state.count};"
+					tasks.with_done_state.each{|t| t.publish_reports }
+				else
+					puts Listing.list_tasks(cmd[:name])
+					exit
+				end
 			when :publish
 				repfn = "#{$cfg[:global][:cachedir]}/#{$cfg[:appsetup][:publish]}"
 				$logger.debug "Записываю отчёт в #{repfn}"

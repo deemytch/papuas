@@ -78,8 +78,10 @@ HELPTEXT
 		end
 		parser.on('-T [id|uri|name]', '--tasks [id|uri|name]', String,
 			'Вывести статус задач. Поиск по id задачи, адресу или имени сервера') do |i|
-				puts Listing.list_tasks(i)
-				exit
+				@@options << { :action => :tasklist }
+		end
+		parser.on('', '--remote [id|uri|name]', String, 'Вывести статус на удалённые сервера') do |name|
+			@@options.last[:remote] = name
 		end
 		parser.on('', '--off', 'Временно исключить хост, заданный в директиве -N или -T') do
 			@@options.last[:action] = :off

@@ -28,6 +28,8 @@ class SourceNode < ServerAccount
 				end
 				ymlfname = Pathname.new(yml).basename.to_s
 				dstname = ymlfname.gsub(/^doit-/, "task-#{task.id}-")
+				task.settings['config'] = dstname
+				task.save!
 				$logger.debug "\t Переименовываю файл #{path}/#{ymlfname} -> #{dstname}"
         ymlfname.force_encoding('binary')
         dstname.force_encoding('binary')
@@ -43,18 +45,18 @@ class SourceNode < ServerAccount
 			end
 		end
 		process_done!
-	# rescue SocketError => e
-	# 	$logger.error "Ошибка подключения к хосту ServerAccount##{id}; #{e.force_encoding("utf-8")}"
-	# 	process_fail!
+		rescue SocketError => e
+			$logger.error "Ошибка подключения к хосту ServerAccount##{id}; #{e.force_encoding("utf-8")}"
+			process_fail!
 	# rescue RuntimeError => e
 	# 	$logger.error "Ошибка чтения файла #{e.force_encoding("utf-8")}"
 	# 	process_fail!
 	# rescue Net::SFTP::StatusException => e
 	# 	$logger.error "Ошибка копирования файлов #{e.force_encoding("utf-8")}"
 	# 	process_fail!
-	# rescue Net::SSH::ConnectionTimeout => e
-	# 	$logger.error "Ошибка подключения #{e.force_encoding("utf-8")}"
-	# 	process_fail!
+		rescue Net::SSH::ConnectionTimeout => e
+			$logger.error "Ошибка подключения #{e.force_encoding("utf-8")}"
+			process_fail!
 	end
 end
 

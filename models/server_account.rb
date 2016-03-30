@@ -29,6 +29,7 @@ class ServerAccount < ActiveRecord::Base
 		state :dirty do # в активный режим переводятся когда нет никакой активности
 			event :power, :transition_to => :active
 			event :power_off, :transition_to => :off
+			event :failed, :transition_to => :fail
 		end
 		state :active do
 			event :passed, :transition_to => :active

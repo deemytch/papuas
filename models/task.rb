@@ -145,4 +145,48 @@ class Task < ActiveRecord::Base
 	def filelist
 		settings['filelist']
 	end
+	
+	def all_right
+		# если не все подзадачи закончились - отказываемся менять статус
+		halt! unless task_reports.pluck(:status).uniq == ['done']
+		dst = settings['config'].gsub('task-', 'done-')
+		o = ''
+		source_node.login do |ssh|
+			o = ssh.exec! %{ cd '#{source_node.path}' && mv -v '#{settings['config']}' '#{dst}' ; echo $? }
+		end
+		if o.chomp.lines.last.to_i == 0
+			settings['config'] = dst
+			save!
+		else
+			$logger.fatal "Что-то пошло не так. Не смог переименовать файл настроек '#{source_node.path}/#{settings['config']}' '#{dst}'\n#{o.force_encoding('utf-8')}"
+			return
+		end
+		publish_reports
+	end
+	
+	def publish_reports
+		source_node.login do |ssh|
+			# пишем коды возврата всех задач
+			$logger.debug "Забираю описание задачи #{source_node.path} / #{settings['config']};"
+			yml = YAML.load( ssh.scp.download!("#{source_node.path}/#{settings['config']}") )
+			$logger.debug "файл загружен"
+			yml['retcodes'] = {}
+			# копируем вывод всех задач на исходный узел
+			task_reports.each do |rep|
+				yml['retcodes'][rep.task_node.name] = rep.retcode
+				$logger.debug "Выгружаю #{source_node.path}/#{rep.task_node.name}.*.log"
+				ssh.scp.upload! StringIO.new(rep.stdout_log), "#{source_node.path}/done-#{id}-#{rep.task_node.name}.stdout.log"
+				ssh.scp.upload! StringIO.new(rep.stderr_log), "#{source_node.path}/done-#{id}-#{rep.task_node.name}.stderr.log"
+			end
+			# записываем исходный файл настроек с добавленными кодами возврата
+			$logger.debug "Выгружаю файл настроек #{source_node.path}/#{settings['config']}"
+			ssh.scp.upload! StringIO.new(YAML.dump(yml)), "#{source_node.path}/#{settings['config']}"
+		end
+		rescue SocketError => e
+			$logger.error "Ошибка подключения к хосту ServerAccount##{source_node.id}; #{e}"
+			source_node.failed!
+		rescue Net::SSH::ConnectionTimeout => e
+			$logger.error "Ошибка подключения #{e}"
+			source_node.failed!
+	end
 end

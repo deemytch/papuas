@@ -53,4 +53,8 @@ class TaskReport < ActiveRecord::Base
 		end
 		rep.allright!
 	end
+	
+	def on_done_entry(ns, ev, *args)
+		task.all_right!
+	end
 end

@@ -5,9 +5,11 @@
 module Executor
 	def self.add_changes!(o)
 		$logger.debug "Выполняю: "
-		o.each do |cmd|
+		o[:commands].each do |cmd|
 			$logger.debug "#{cmd[:action]}"
 			case cmd[:action]
+			when :list
+				puts Listing.list_servers(cmd[:t], cmd[:name], o[:flags][:render])
 			when :off # name:[id,uri,name]
 				x = cmd[:t].id_name_uri(cmd[:name]).first
 				if x.present?

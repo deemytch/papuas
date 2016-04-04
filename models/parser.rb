@@ -43,108 +43,110 @@ HELPTEXT
 		uri: "ssh://" + URI
 		}]
 =end
-	@@options = []
-	verbose = Logger::WARN
-	OptionParser.new do |parser|
-		parser.on('-S [id|name|URI]', '--source [id|name|URI]', String,
-			'Работа с источниками задач') do |name|
-			unless name.nil?
-				@@options << { :action => :add, :t => SourceNode, name: name}
-			else
-				puts Listing.list_sources
-				exit
+	def self.do
+		@@options = {
+			commands: [],
+			flags: { :render => :unicode, :verbose => Logger::INFO }
+		}
+		
+		OptionParser.new do |parser|
+			parser.on('-S [id|name|URI]', '--source [id|name|URI]', String,
+				'Работа с источниками задач') do |name|
+				@@options[:commands] << 
+					( name.nil? ? { :action => :list, :t => SourceNode } :
+												{ :action => :add, :t => SourceNode, name: name} )
 			end
-		end
-		parser.on('-N [id|name|URI]', '--node [id|name|URI]', String,
-			'Работа с узлами назначения') do |name|
-			unless name.nil?
-				@@options << { :action => :add, :t => TaskNode, name: name }
-			else
-				puts Listing.list_nodes
-				exit
+			parser.on('-N [id|name|URI]', '--node [id|name|URI]', String,
+				'Работа с узлами назначения') do |name|
+					@@options[:commands] <<
+						( name.nil? ? { :action => :list, :t => TaskNode } :
+													{ :action => :add, :t => TaskNode, name: name })
 			end
-		end
-		parser.on('-U [id|name]', '--user [id|name]', String, 'Список аккаунтов') do |name|
-			puts Listing.list_servers name
-			exit
-		end
-		parser.on('-R name|uri|id', '--rm name|uri|id', String,
-			'удаление записи по имени, ID или URI; %ID для номера задачи') do |name|
-			@@options << { t: ((name =~ /^%/) ? Task : ServerAccount), :action => :del, name: name }
-		end
-		parser.on('-C [name|uri|id]', '--check [name|uri|id]', String,
-			'зайти на сервер для проверки настроек') do |name|
-			@@options << ( name ? { :action => :check, name: name } : { action: :check } )
-		end
-		parser.on('-T [id|uri|name]', '--tasks [id|uri|name]', String,
-			'Вывести статус задач. Поиск по id задачи, адресу или имени сервера') do |i|
-				@@options << { :action => :tasklist }
-		end
-		parser.on('', '--remote [id|uri|name]', String, 'Вывести статус на удалённые сервера') do |name|
-			@@options.last[:remote] = name
-		end
-		parser.on('', '--off', 'Временно исключить хост, заданный в директиве -N или -T') do
-			@@options.last[:action] = :off
-		end
-		parser.on('', '--on', 'Временно исключить хост, заданный в директиве -N или -T') do
-			@@options.last[:action] = :on
-		end
-		parser.on('-u uri', '--uri uri', String, 'URI') do |uri|
-			@@options.last[:params] ||= {}
-			@@options.last[:params][:uri] = uri
-		end
-		parser.on('-l login', '--login login', String, 'Имя пользователя (login)') do |login|
-			@@options.last[:params] ||= {}
-			@@options.last[:params][:login] = login
-		end
-		parser.on('-n имя', '--name имя', String, 'Дать имя ресурсу') do |name|
-			@@options.last[:params] ||= {}
-			@@options.last[:params][:name] = name
-		end
-		parser.on('-e ФИО', '--fullname ФИО', String, 'Задать настоящее имя пользователя') do |name|
-			@@options.last[:params] ||= {}
-			@@options.last[:params][:realname] = name
-		end
-		parser.on('-k', '--key имя-файла', String, 'Имя файла с приватным ключом') do |fname|
-			@@options.last[:params] ||= {}
-			@@options.last[:params][:key] = fname
-		end
-		parser.on('-d', '--dir папка', String, 'Путь') do |path|
-			@@options.last[:params] ||= {}
-			@@options.last[:params][:path] = path
-		end
-		parser.on('-p', '--port порт', Integer, 'Порт') do |port|
-			@@options.last[:params] ||= {}
-			@@options.last[:params][:port] = port
-		end
-		parser.on('-i описание', '--descr описание', String, 'Задать описание ресурса') do |descr|
-			@@options.last[:params] ||= {}
-			@@options.last[:params][:descr] = descr
-		end
-		parser.on('-L', '--logrotate', 'Архивация и очистка базы') do
-			@@options << { :action => :logrotate }
-		end
-		parser.on('-P [NAME]', '--publish [NAME]', String,
-			"Публикация справочника с целевыми узлами и логинами\n\t\t\t\t\tна каждый источник в файл *nodes.listing.yml*") do
-			@@options << { :action => :publish }
-		end
-		parser.on('-v [level]', '--verbose [(debug|notice|warn|error|fatal)]', String,
-			'Разговорчивый режим, чтобы усилить - добавь ещё "v"') do |level|
-			if level =~ /^(debug|notice|warn|error|fatal)$/
-				verbose = Config.verbosity.find_index(level) if Config.verbosity.include?(level)
-			else
-				verbose -= 1
-				verbose = 0 if verbose < 0
+			parser.on('-U [id|name]', '--user [id|name]', String, 'Список аккаунтов') do |name|
+				@@options[:commands] << { :action => :list, :t => ServerAccount, name: name }
 			end
-			Config.set_gad verbose
-		end
-		parser.on('-z', '--zap', 'Удалить все записи, со статусом "удалено"') do
-			@@options << { :action => :zap }
-		end
-		parser.on('-h', '--help', 'Справка'){ puts "#{parser}\n#{helptext}"; exit }
-	end.parse!
-
+			parser.on('-R name|uri|id', '--rm name|uri|id', String,
+				'удаление записи по имени, ID или URI; %ID для номера задачи') do |name|
+				@@options[:commands] << { t: ((name =~ /^%/) ? Task : ServerAccount), :action => :del, name: name }
+			end
+			parser.on('-C [name|uri|id]', '--check [name|uri|id]', String,
+				'зайти на сервер для проверки настроек') do |name|
+				@@options[:commands] << ( name ? { :action => :check, name: name } : { action: :check } )
+			end
+			parser.on('-T [id|uri|name]', '--tasks [id|uri|name]', String,
+				'Вывести статус задач. Поиск по id задачи, адресу или имени сервера') do |i|
+					@@options[:commands] << { :action => :tasklist }
+			end
+			parser.on('', '--remote [id|uri|name]', String, 'Вывести статус на удалённые сервера') do |name|
+				@@options[:commands].last[:action] = :publish
+				@@options[:commands].last[:remote] = name
+			end
+			parser.on('--render [basic|ascii|remote]', String, 'Формат вывода таблиц') do |fmt|
+				if fmt =~ /^(basic|ascii|unicode)$/
+					@@options[:flags][:render] = fmt.to_sym
+				end
+			end
+			parser.on('', '--off', 'Временно исключить хост, заданный в директиве -N или -T') do
+				@@options[:commands].last[:action] = :off
+			end
+			parser.on('', '--on', 'Временно исключить хост, заданный в директиве -N или -T') do
+				@@options[:commands].last[:action] = :on
+			end
+			parser.on('-u uri', '--uri uri', String, 'URI') do |uri|
+				@@options[:commands].last[:params] ||= {}
+				@@options[:commands].last[:params][:uri] = uri
+			end
+			parser.on('-l login', '--login login', String, 'Имя пользователя (login)') do |login|
+				@@options[:commands].last[:params] ||= {}
+				@@options[:commands].last[:params][:login] = login
+			end
+			parser.on('-n имя', '--name имя', String, 'Дать имя ресурсу') do |name|
+				@@options[:commands].last[:params] ||= {}
+				@@options[:commands].last[:params][:name] = name
+			end
+			parser.on('-e ФИО', '--fullname ФИО', String, 'Задать настоящее имя пользователя') do |name|
+				@@options[:commands].last[:params] ||= {}
+				@@options[:commands].last[:params][:realname] = name
+			end
+			parser.on('-k', '--key имя-файла', String, 'Имя файла с приватным ключом') do |fname|
+				@@options[:commands].last[:params] ||= {}
+				@@options[:commands].last[:params][:key] = fname
+			end
+			parser.on('-d', '--dir папка', String, 'Путь') do |path|
+				@@options[:commands].last[:params] ||= {}
+				@@options[:commands].last[:params][:path] = path
+			end
+			parser.on('-p', '--port порт', Integer, 'Порт') do |port|
+				@@options[:commands].last[:params] ||= {}
+				@@options[:commands].last[:params][:port] = port
+			end
+			parser.on('-i описание', '--descr описание', String, 'Задать описание ресурса') do |descr|
+				@@options[:commands].last[:params] ||= {}
+				@@options[:commands].last[:params][:descr] = descr
+			end
+			parser.on('-L', '--logrotate', 'Архивация и очистка базы') do
+				@@options[:commands] << { :action => :logrotate }
+			end
+			parser.on('-v [level]', '--verbose [(debug|notice|warn|error|fatal)]', String,
+				'Разговорчивый режим, чтобы усилить - добавь ещё "v"') do |level|
+				if level =~ /^(debug|notice|warn|error|fatal)$/
+					@@options[:flags][:verbose] = Config.verbosity.find_index(level) if Config.verbosity.include?(level)
+				else
+					@@options[:flags][:verbose] -= 1
+					@@options[:flags][:verbose] = 0 if @@options[:flags][:verbose] < 0
+				end
+				Config.set_gad @@options[:flags][:verbose]
+			end
+			parser.on('-z', '--zap', 'Удалить все записи, со статусом "удалено"') do
+				@@options[:commands] << { :action => :zap }
+			end
+			parser.on('-h', '--help', 'Справка'){ puts "#{parser}\n#{helptext}"; exit }
+		end.parse!
+		return @@options
+	end
+	
 	def self.options
-		@@options
+		@@options ||= Parser.do
+		return @@options
 	end
 end
